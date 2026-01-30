@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trình Trích Xuất và So Sánh Câu Hỏi PDF</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    <script src="https://unpkg.com/docx@7.3.0/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .loader {
+        border-top-color: #3498db;
+        -webkit-animation: spinner 1.5s linear infinite;
+        animation: spinner 1.5s linear infinite;
+      }
+      @-webkit-keyframes spinner {
+        0% {
+          -webkit-transform: rotate(0deg);
+        }
+        100% {
+          -webkit-transform: rotate(360deg);
+        }
+      }
+      textarea {
+        resize: vertical;
+      }
+      .comparison-table td,
+      .comparison-table th {
+        border: 1px solid #e2e8f0;
+        padding: 8px;
+      }
+      .highlight-red {
+        background-color: #fef2f2;
+        color: #991b1b;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 text-gray-800 min-h-screen p-4">
+    <!-- Main View -->
+    <div
+      id="main-view"
+      class="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8"
+    >
+      <header class="text-center mb-6">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-900">
+          Trình Trích Xuất Câu Hỏi từ PDF
+        </h1>
+        <p class="mt-2 text-gray-600">
+          Tải lên, xử lý, chỉnh sửa và định dạng câu hỏi trắc nghiệm từ các tệp
+          PDF.
+        </p>
+      </header>
+
+      <div
+        class="upload-section border-2 border-dashed border-gray-300 rounded-lg p-8 text-center transition-all duration-300 hover:border-blue-500 hover:bg-gray-50"
+      >
+        <input
+          type="file"
+          id="pdf-upload"
+          class="hidden"
+          accept="application/pdf"
+          multiple
+        />
+        <label for="pdf-upload" class="cursor-pointer">
+          <svg
+            class="mx-auto h-12 w-12 text-gray-400"
+            stroke="currentColor"
+            fill="none"
+            viewBox="0 0 48 48"
+            aria-hidden="true"
+          >
+            <path
+              d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <p class="mt-2 text-lg font-medium text-blue-600">
+            Nhấn để chọn tệp PDF
+          </p>
+          <p id="file-name" class="mt-1 text-sm text-gray-500">
+            Chưa có tệp nào được chọn
+          </p>
+        </label>
+      </div>
+
+      <div class="mt-6 flex flex-wrap justify-center items-center gap-4">
+        <button
+          id="process-btn"
+          class="w-full sm:w-auto bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          disabled
+        >
+          1. Xử lý PDF
+        </button>
+        <button
+          id="replace-btn"
+          class="w-full sm:w-auto bg-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-purple-700 transition-colors duration-300 hidden"
+        >
+          2. Tách đáp án (#)
+        </button>
+        <button
+          id="quiz-format-btn"
+          class="w-full sm:w-auto bg-teal-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-teal-700 transition-colors duration-300 hidden"
+        >
+          3. Định dạng trắc nghiệm
+        </button>
+        <button
+          id="export-word-btn"
+          class="w-full sm:w-auto bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition-colors duration-300 hidden"
+        >
+          4. Xuất ra Word
+        </button>
+        <button
+          id="export-json-btn"
+          class="w-full sm:w-auto bg-orange-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-orange-600 transition-colors duration-300 hidden"
+        >
+          5. Xuất ra JSON
+        </button>
+        <button
+          id="go-to-compare-btn"
+          class="w-full sm:w-auto bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-colors duration-300 hidden"
+        >
+          6. So sánh với đề cương
+        </button>
+      </div>
+
+      <div id="loader" class="mt-6 text-center hidden">
+        <div
+          class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-16 w-16 mx-auto"
+        ></div>
+        <p class="mt-4 text-gray-600 font-medium">Đang xử lý...</p>
+      </div>
+      <div id="message-area" class="mt-6 text-center font-medium"></div>
+
+      <div id="preview-section" class="mt-8 hidden">
+        <h2 class="text-2xl font-bold text-gray-800 border-b pb-2 mb-4">
+          Xem trước & Chỉnh sửa các câu hỏi
+        </h2>
+        <p class="text-sm text-gray-500 mb-4">
+          Bạn có thể chỉnh sửa nội dung trong các ô văn bản dưới đây.
+        </p>
+        <div id="questions-preview" class="space-y-4"></div>
+      </div>
+    </div>
+
+    <!-- Comparison View -->
+    <div
+      id="comparison-view"
+      class="w-full max-w-7xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8 hidden"
+    >
+      <header class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-900">
+          So sánh Đề thi và Đề cương
+        </h1>
+        <button
+          id="back-to-main-btn"
+          class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300"
+        >
+          Quay lại
+        </button>
+      </header>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h2 class="text-xl font-bold mb-2">
+            Cột 1: Dữ liệu từ PDF
+            <span
+              id="pdf-count"
+              class="text-base font-normal text-gray-500"
+            ></span>
+          </h2>
+          <div
+            id="pdf-data-column"
+            class="h-[60vh] overflow-y-auto p-3 bg-gray-50 rounded-lg border"
+          ></div>
+        </div>
+        <div>
+          <h2 class="text-xl font-bold mb-2">
+            Cột 2: Dữ liệu từ Đề cương API
+            <span
+              id="api-count"
+              class="text-base font-normal text-gray-500"
+            ></span>
+          </h2>
+          <div
+            id="api-data-column"
+            class="h-[60vh] overflow-y-auto p-3 bg-gray-50 rounded-lg border"
+          ></div>
+        </div>
+      </div>
+
+      <div
+        class="mt-6 flex flex-col sm:flex-row justify-center items-center gap-4"
+      >
+        <div class="flex items-center gap-2">
+          <label for="similarity-range" class="font-medium">Ngưỡng khớp:</label>
+          <input
+            id="similarity-range"
+            type="range"
+            min="50"
+            max="100"
+            value="80"
+            class="w-48"
+          />
+          <span
+            id="similarity-value"
+            class="font-bold text-blue-600 w-12 text-center"
+            >80%</span
+          >
+        </div>
+        <button
+          id="compare-results-btn"
+          class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+        >
+          So sánh kết quả
+        </button>
+      </div>
+
+      <div
+        id="comparison-summary"
+        class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center hidden"
+      >
+        <!-- Comparison stats will be injected here -->
+      </div>
+
+      <div id="comparison-results-section" class="mt-8 hidden">
+        <h2 class="text-2xl font-bold text-gray-800 border-b pb-2 mb-4">
+          Bảng phân tích kết quả chi tiết
+        </h2>
+        <table class="w-full text-sm text-left text-gray-500 comparison-table">
+          <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+            <tr>
+              <th class="w-1/2 px-6 py-3">Câu hỏi trong PDF</th>
+              <th class="w-1/2 px-6 py-3">Câu hỏi trong Đề cương API</th>
+            </tr>
+          </thead>
+          <tbody id="comparison-results-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
+
+      // --- DOM Elements ---
+      const mainView = document.getElementById("main-view");
+      const comparisonView = document.getElementById("comparison-view");
+      const pdfUpload = document.getElementById("pdf-upload");
+      const fileNameDisplay = document.getElementById("file-name");
+      const processBtn = document.getElementById("process-btn");
+      const replaceBtn = document.getElementById("replace-btn");
+      const quizFormatBtn = document.getElementById("quiz-format-btn");
+      const exportWordBtn = document.getElementById("export-word-btn");
+      const exportJsonBtn = document.getElementById("export-json-btn");
+      const goToCompareBtn = document.getElementById("go-to-compare-btn");
+      const backToMainBtn = document.getElementById("back-to-main-btn");
+      const compareResultsBtn = document.getElementById("compare-results-btn");
+      const loader = document.getElementById("loader");
+      const messageArea = document.getElementById("message-area");
+      const previewSection = document.getElementById("preview-section");
+      const questionsPreview = document.getElementById("questions-preview");
+      const pdfDataColumn = document.getElementById("pdf-data-column");
+      const apiDataColumn = document.getElementById("api-data-column");
+      const comparisonSummary = document.getElementById("comparison-summary");
+      const comparisonResultsSection = document.getElementById(
+        "comparison-results-section"
+      );
+      const comparisonResultsBody = document.getElementById(
+        "comparison-results-body"
+      );
+      const pdfCountSpan = document.getElementById("pdf-count");
+      const apiCountSpan = document.getElementById("api-count");
+      const similarityRange = document.getElementById("similarity-range");
+      const similarityValue = document.getElementById("similarity-value");
+
+      // --- State Variables ---
+      let extractedQuestions = [];
+      let pdfFiles = [];
+      let pdfJsonData = [];
+      let apiJsonData = [];
+
+      // --- Event Listeners ---
+      pdfUpload.addEventListener("change", handleFileUpload);
+      processBtn.addEventListener("click", processPdfFiles);
+      replaceBtn.addEventListener("click", replaceAnswers);
+      quizFormatBtn.addEventListener("click", displayAsQuiz);
+      exportWordBtn.addEventListener("click", exportToWord);
+      exportJsonBtn.addEventListener("click", exportToJson);
+      goToCompareBtn.addEventListener("click", showComparisonView);
+      backToMainBtn.addEventListener("click", () => {
+        mainView.classList.remove("hidden");
+        comparisonView.classList.add("hidden");
+      });
+      compareResultsBtn.addEventListener("click", renderComparisonResults);
+      similarityRange.addEventListener("input", (e) => {
+        similarityValue.textContent = `${e.target.value}%`;
+        // Re-run comparison if data is available
+        if (pdfJsonData.length > 0 && apiJsonData.length > 0) {
+          renderComparisonResults();
+        }
+      });
+
+      // --- Functions ---
+      function handleFileUpload(event) {
+        pdfFiles = event.target.files;
+        if (pdfFiles.length > 0) {
+          fileNameDisplay.textContent = `${pdfFiles.length} tệp đã được chọn`;
+          processBtn.disabled = false;
+          resetUI();
+        } else {
+          fileNameDisplay.textContent = "Chưa có tệp nào được chọn";
+          processBtn.disabled = true;
+        }
+      }
+
+      function resetUI() {
+        messageArea.textContent = "";
+        previewSection.classList.add("hidden");
+        [
+          replaceBtn,
+          quizFormatBtn,
+          exportWordBtn,
+          exportJsonBtn,
+          goToCompareBtn,
+        ].forEach((btn) => btn.classList.add("hidden"));
+        [replaceBtn, quizFormatBtn].forEach((btn) => (btn.disabled = false));
+        questionsPreview.innerHTML = "";
+        extractedQuestions = [];
+        pdfJsonData = [];
+      }
+
+      async function processPdfFiles() {
+        if (pdfFiles.length === 0) return;
+        loader.classList.remove("hidden");
+        resetUI();
+        processBtn.disabled = true;
+
+        try {
+          const fileProcessingPromises = Array.from(pdfFiles).map((file) => {
+            return new Promise((resolve, reject) => {
+              const fileReader = new FileReader();
+              fileReader.onload = async function () {
+                try {
+                  const typedarray = new Uint8Array(this.result);
+                  const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                  let fullText = "";
+                  for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    fullText += textContent.items
+                      .map((item) => item.str)
+                      .join(" ");
+                  }
+                  resolve(fullText);
+                } catch (e) {
+                  reject(e);
+                }
+              };
+              fileReader.onerror = () =>
+                reject(new Error(`Không thể đọc tệp ${file.name}`));
+              fileReader.readAsArrayBuffer(file);
+            });
+          });
+
+          const combinedText = (await Promise.all(fileProcessingPromises)).join(
+            "\n\n"
+          );
+          parseQuestions(combinedText);
+          displayQuestionsAsEditable();
+        } catch (error) {
+          messageArea.textContent = `Lỗi: ${error.message}`;
+          messageArea.className = "mt-6 text-center font-medium text-red-600";
+        } finally {
+          loader.classList.add("hidden");
+          processBtn.disabled = false;
+        }
+      }
+
+      function parseQuestions(text) {
+        const normalizedText = text
+          .replace(/(\r\n|\n|\r)/gm, "\n")
+          .replace(/ +/g, " ");
+        const questionRegex =
+          /(Câu hỏi\s*\d+\s*:[\s\S]*?)(?=\n*Câu hỏi\s*\d+\s*:|\s*$)/g;
+        const matches = normalizedText.match(questionRegex);
+        if (matches) extractedQuestions = matches.map((match) => match.trim());
+      }
+
+      function displayQuestionsAsEditable() {
+        if (extractedQuestions.length === 0) {
+          messageArea.textContent = "Không tìm thấy câu hỏi nào.";
+          return;
+        }
+        questionsPreview.innerHTML = "";
+        extractedQuestions.forEach((q, index) => {
+          const textarea = document.createElement("textarea");
+          textarea.className =
+            "w-full h-24 p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500";
+          textarea.value = q;
+          textarea.oninput = (event) => {
+            extractedQuestions[index] = event.target.value;
+          };
+          questionsPreview.appendChild(textarea);
+        });
+        previewSection.classList.remove("hidden");
+        replaceBtn.classList.remove("hidden");
+        messageArea.textContent = `Đã tìm thấy ${extractedQuestions.length} câu hỏi. Bạn có thể chỉnh sửa chúng.`;
+        messageArea.className = "mt-6 text-center font-medium text-green-600";
+      }
+
+      function replaceAnswers() {
+        if (extractedQuestions.length === 0) return;
+        extractedQuestions = extractedQuestions.map((q) =>
+          q
+            .replace(/([\s:])(►?\s*[A-D])(\s)/g, "$1 # $2$3")
+            .replace(/\s+#\s+/g, " # ")
+        );
+        displayQuestionsAsEditable();
+        messageArea.textContent = "Đã tách các đáp án bằng dấu #.";
+        messageArea.className = "mt-6 text-center font-medium text-blue-600";
+        replaceBtn.disabled = true;
+        [quizFormatBtn, exportWordBtn, exportJsonBtn, goToCompareBtn].forEach(
+          (btn) => btn.classList.remove("hidden")
+        );
+      }
+
+      function displayAsQuiz() {
+        questionsPreview.innerHTML = "";
+        extractedQuestions.forEach((qText) => {
+          const parts = qText
+            .split("#")
+            .map((p) => p.trim())
+            .filter((p) => p);
+          const questionBlock = document.createElement("div");
+          questionBlock.className =
+            "p-4 border border-gray-200 rounded-lg bg-white";
+          if (parts.length < 2) {
+            questionBlock.textContent = qText;
+          } else {
+            const [questionContent, ...answers] = parts;
+            const questionP = document.createElement("p");
+            questionP.className = "font-semibold mb-3";
+            questionP.textContent = questionContent;
+            questionBlock.appendChild(questionP);
+            const answersContainer = document.createElement("div");
+            answersContainer.className = "space-y-2";
+            answers.forEach((answerText) => {
+              const isCorrect = answerText.includes("►");
+              const cleanAnswer = answerText.replace("►", "").trim();
+              const answerP = document.createElement("p");
+              answerP.className = `ml-4 ${
+                isCorrect ? "font-bold text-green-600" : ""
+              }`;
+              answerP.textContent = `${cleanAnswer.charAt(0)}. ${cleanAnswer
+                .substring(1)
+                .trim()}`;
+              answersContainer.appendChild(answerP);
+            });
+            questionBlock.appendChild(answersContainer);
+          }
+          questionsPreview.appendChild(questionBlock);
+        });
+        messageArea.textContent =
+          "Hiển thị dạng trắc nghiệm (không thể chỉnh sửa).";
+        quizFormatBtn.disabled = true;
+      }
+
+      function generateJsonData() {
+        return extractedQuestions.map((qText) => {
+          const parts = qText
+            .split("#")
+            .map((p) => p.trim())
+            .filter((p) => p);
+          if (parts.length < 2)
+            return { question: qText, options: {}, correct_answer: null };
+          const question = parts[0].replace(/^câu hỏi\s*\d+\s*:/i, "").trim();
+          const answers = parts.slice(1);
+          const options = {};
+          let correct_answer = null;
+          answers.forEach((ans) => {
+            const isCorrect = ans.includes("►");
+            const cleanAns = ans.replace("►", "").trim();
+            const letter = cleanAns.charAt(0).toUpperCase();
+            const text = cleanAns.substring(1).trim();
+            options[letter] = text;
+            if (isCorrect) correct_answer = letter;
+          });
+          return { question, options, correct_answer };
+        });
+      }
+
+      function exportToJson() {
+        pdfJsonData = generateJsonData();
+        const jsonString = JSON.stringify(pdfJsonData, null, 2);
+        const blob = new Blob([jsonString], { type: "application/json" });
+        saveAs(blob, "cac-cau-hoi.json");
+        messageArea.textContent = "Đã xuất tệp JSON thành công!";
+      }
+
+      async function showComparisonView() {
+        if (pdfJsonData.length === 0) {
+          pdfJsonData = generateJsonData();
+        }
+        mainView.classList.add("hidden");
+        comparisonView.classList.remove("hidden");
+        compareResultsBtn.disabled = true;
+        comparisonResultsSection.classList.add("hidden");
+        comparisonSummary.classList.add("hidden");
+
+        apiDataColumn.innerHTML =
+          '<div class="flex justify-center items-center h-full"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12"></div></div>';
+
+        try {
+          const response = await fetch(
+            "http://160.30.160.161:3000/api/exams/6821da2b75e3c92258943743/questions"
+          );
+          if (!response.ok) throw new Error(`API Error: ${response.status}`);
+          const result = await response.json();
+          apiJsonData = result.data.data.map((item) => ({
+            question: item.text.replace(/^\d+\.\s*/, "").trim(),
+            options: item.answers.reduce((acc, ans) => {
+              const letter = ans.text.charAt(0);
+              acc[letter] = ans.text.substring(1).trim();
+              return acc;
+            }, {}),
+            correct_answer: item.answers
+              .find((a) => a.isCorrect)
+              ?.text.charAt(0),
+          }));
+
+          pdfCountSpan.textContent = `(${pdfJsonData.length} câu hỏi)`;
+          apiCountSpan.textContent = `(${apiJsonData.length} câu hỏi)`;
+
+          renderColumn(pdfDataColumn, pdfJsonData);
+          renderColumn(apiDataColumn, apiJsonData);
+
+          compareResultsBtn.disabled = false;
+        } catch (error) {
+          apiDataColumn.innerHTML = `<p class="text-red-500">Lỗi khi tải dữ liệu đề cương: ${error.message}</p>`;
+        }
+      }
+
+      function renderColumn(columnElement, data) {
+        columnElement.innerHTML = "";
+        data.forEach((q, index) => {
+          const div = document.createElement("div");
+          div.className = "p-3 mb-2 border rounded-md bg-white";
+          div.innerHTML = `<p class="font-bold">${q.question}</p>`; // Removed index for cleaner look
+          div.dataset.index = index; // Keep track of original index
+          columnElement.appendChild(div);
+        });
+      }
+
+      function levenshteinDistance(a, b) {
+        if (a.length === 0) return b.length;
+        if (b.length === 0) return a.length;
+        const matrix = Array(b.length + 1)
+          .fill(null)
+          .map(() => Array(a.length + 1).fill(null));
+        for (let i = 0; i <= a.length; i++) {
+          matrix[0][i] = i;
+        }
+        for (let j = 0; j <= b.length; j++) {
+          matrix[j][0] = j;
+        }
+        for (let j = 1; j <= b.length; j++) {
+          for (let i = 1; i <= a.length; i++) {
+            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+            matrix[j][i] = Math.min(
+              matrix[j][i - 1] + 1,
+              matrix[j - 1][i] + 1,
+              matrix[j - 1][i - 1] + cost
+            );
+          }
+        }
+        return matrix[b.length][a.length];
+      }
+
+      function calculateSimilarity(str1, str2) {
+        const distance = levenshteinDistance(str1, str2);
+        const maxLength = Math.max(str1.length, str2.length);
+        if (maxLength === 0) return 100;
+        return (1 - distance / maxLength) * 100;
+      }
+
+      function renderComparisonResults() {
+        const threshold = parseInt(similarityRange.value, 10);
+        const normalize = (str) =>
+          str
+            .trim()
+            .toLowerCase()
+            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "")
+            .replace(/\s+/g, " ");
+
+        const finalMatches = new Map();
+        const usedApiIndices = new Set();
+
+        const potentialMatches = [];
+        pdfJsonData.forEach((pdfQ, pdfIndex) => {
+          apiJsonData.forEach((apiQ, apiIndex) => {
+            const similarity = calculateSimilarity(
+              normalize(pdfQ.question),
+              normalize(apiQ.question)
+            );
+            if (similarity >= threshold) {
+              potentialMatches.push({ pdfIndex, apiIndex, similarity });
+            }
+          });
+        });
+
+        potentialMatches.sort((a, b) => b.similarity - a.similarity);
+
+        potentialMatches.forEach((match) => {
+          if (
+            !finalMatches.has(match.pdfIndex) &&
+            !usedApiIndices.has(match.apiIndex)
+          ) {
+            finalMatches.set(match.pdfIndex, match.apiIndex);
+            usedApiIndices.add(match.apiIndex);
+          }
+        });
+
+        const matchedCount = finalMatches.size;
+
+        // Highlight PDF column
+        pdfDataColumn.querySelectorAll("div").forEach((div) => {
+          const pdfIndex = parseInt(div.dataset.index, 10);
+          if (finalMatches.has(pdfIndex)) {
+            div.classList.remove("highlight-red");
+          } else {
+            div.classList.add("highlight-red");
+          }
+        });
+
+        // Render summary
+        const totalPdf = pdfJsonData.length;
+        const unmatchedPdfCount = totalPdf - matchedCount;
+        const percentage = totalPdf > 0 ? (matchedCount / totalPdf) * 100 : 0;
+
+        comparisonSummary.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-gray-700">
+                    <div><span class="font-bold text-lg block">${matchedCount}</span><span>Trùng khớp</span></div>
+                    <div><span class="font-bold text-lg block">${unmatchedPdfCount}</span><span>Không khớp (trong PDF)</span></div>
+                    <div><span class="font-bold text-lg block">${percentage.toFixed(
+                      1
+                    )}%</span><span>Tỉ lệ trùng khớp</span></div>
+                </div>
+            `;
+
+        // Render detailed table
+        comparisonResultsBody.innerHTML = "";
+        const matchedPdfIndices = new Set(finalMatches.keys());
+
+        // Add matched rows
+        finalMatches.forEach((apiIndex, pdfIndex) => {
+          const row = comparisonResultsBody.insertRow();
+          row.insertCell(0).textContent = pdfJsonData[pdfIndex].question;
+          row.insertCell(1).textContent = apiJsonData[apiIndex].question;
+        });
+
+        // Add unmatched PDF rows
+        pdfJsonData.forEach((pdfQ, pdfIndex) => {
+          if (!matchedPdfIndices.has(pdfIndex)) {
+            const row = comparisonResultsBody.insertRow();
+            row.classList.add("highlight-red");
+            row.insertCell(0).textContent = pdfQ.question;
+            row.insertCell(1).textContent = "---";
+          }
+        });
+
+        // Add unmatched API rows
+        apiJsonData.forEach((apiQ, apiIndex) => {
+          if (!usedApiIndices.has(apiIndex)) {
+            const row = comparisonResultsBody.insertRow();
+            row.classList.add("highlight-red");
+            row.insertCell(0).textContent = "---";
+            row.insertCell(1).textContent = apiQ.question;
+          }
+        });
+
+        comparisonSummary.classList.remove("hidden");
+        comparisonResultsSection.classList.remove("hidden");
+      }
+
+      function exportToWord() {
+        const { Document, Packer, Paragraph, TextRun } = docx;
+        const children = extractedQuestions.flatMap((qText) => {
+          const questionParagraphs = [];
+          const parts = qText
+            .split("#")
+            .map((p) => p.trim())
+            .filter((p) => p);
+          if (parts.length < 2)
+            return [new Paragraph(qText), new Paragraph("")];
+          const [questionContent, ...answers] = parts;
+          questionParagraphs.push(
+            new Paragraph({
+              children: [new TextRun({ text: questionContent, bold: true })],
+              spacing: { after: 200 },
+            })
+          );
+          answers.forEach((answerText) => {
+            const isCorrect = answerText.includes("►");
+            const cleanAnswer = answerText.replace("►", "").trim();
+            if (cleanAnswer.length > 0) {
+              const letter = cleanAnswer.charAt(0);
+              const text = cleanAnswer.substring(1).trim();
+              questionParagraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `${letter}. ${text}`,
+                      bold: isCorrect,
+                    }),
+                  ],
+                  indent: { left: 720 },
+                  spacing: { after: 100 },
+                })
+              );
+            }
+          });
+          questionParagraphs.push(new Paragraph(""));
+          return questionParagraphs;
+        });
+        const doc = new Document({ sections: [{ children }] });
+        Packer.toBlob(doc).then((blob) =>
+          saveAs(blob, "cac-cau-hoi-trac-nghiem.docx")
+        );
+      }
+    </script>
+  </body>
+</html>

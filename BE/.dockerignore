@@ -1,0 +1,27 @@
+# Các thư mục không cần thiết
+node_modules
+npm-debug.log
+.git
+.gitignore
+.github
+
+# Các file build
+dist
+
+# Các file môi trường
+.env
+.env.*
+
+# Các file log
+logs
+*.log
+
+# Các file editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# Các file tạm thời
+.DS_Store
+Thumbs.db 

@@ -1,0 +1,1116 @@
+
+Tôi sẽ áp dụng thiết kế vào dự án của bạn, tạo các file cần thiết theo cấu trúc dự án hiện tại.
+
+## 1. Tạo Models
+
+```typescript:src/models/exam.ts
+import { Schema, model } from "mongoose";
+
+const examSchema = new Schema(
+  {
+    productId: { 
+      type: Schema.Types.ObjectId, 
+      ref: "products", 
+      required: true 
+    },
+    name: { 
+      type: String, 
+      required: true 
+    },
+    description: { 
+      type: String 
+    },
+    duration: { 
+      type: Number, 
+      required: true, 
+      min: 1 
+    }, // thời gian tính bằng phút
+    status: { 
+      type: String, 
+      enum: ["active", "inactive", "draft"], 
+      default: "draft" 
+    },
+  },
+  { 
+    timestamps: true 
+  }
+);
+
+const Exam = model("Exam", examSchema);
+
+export default Exam;
+```
+
+```typescript:src/models/question.ts
+import { Schema, model } from "mongoose";
+
+const answerSchema = new Schema({
+  text: { 
+    type: String, 
+    required: true 
+  },
+  isCorrect: { 
+    type: Boolean, 
+    required: true 
+  },
+  order: { 
+    type: Number 
+  }
+});
+
+const questionSchema = new Schema(
+  {
+    examId: { 
+      type: Schema.Types.ObjectId, 
+      ref: "Exam", 
+      required: true 
+    },
+    text: { 
+      type: String, 
+      required: true 
+    },
+    image: { 
+      type: String 
+    },
+    answers: [answerSchema],
+    difficulty: { 
+      type: String, 
+      enum: ["easy", "medium", "hard"], 
+      default: "medium" 
+    }
+  },
+  { 
+    timestamps: true 
+  }
+);
+
+const Question = model("Question", questionSchema);
+
+export default Question;
+```
+## 2. Tạo Services
+
+Ran tool
+
+```typescript:src/service/exam.service.ts
+import Exam from "../models/exam";
+import Question from "../models/question";
+import Product from "../models/products";
+
+class ExamService {
+  /**
+   * Lấy danh sách bài kiểm tra theo sản phẩm
+   */
+  async getExamsByProduct(productId, page = 1, limit = 10) {
+    try {
+      // Kiểm tra sản phẩm tồn tại
+      const product = await Product.findById(productId);
+      if (!product) {
+        throw new Error('Không tìm thấy sản phẩm');
+      }
+      
+      const skip = (page - 1) * limit;
+      const exams = await Exam.find({ productId })
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+        
+      const total = await Exam.countDocuments({ productId });
+      
+      return {
+        data: exams,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy thông tin bài kiểm tra theo ID
+   */
+  async getExamById(examId) {
+    try {
+      const exam = await Exam.findById(examId);
+      if (!exam) {
+        throw new Error('Không tìm thấy bài kiểm tra');
+      }
+      return exam;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Tạo bài kiểm tra mới
+   */
+  async createExam(productId, examData) {
+    try {
+      // Kiểm tra sản phẩm tồn tại
+      const product = await Product.findById(productId);
+      if (!product) {
+        throw new Error('Không tìm thấy sản phẩm');
+      }
+      
+      const newExam = await Exam.create({
+        ...examData,
+        productId
+      });
+      
+      return newExam;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Cập nhật bài kiểm tra
+   */
+  async updateExam(examId, examData) {
+    try {
+      const exam = await Exam.findById(examId);
+      if (!exam) {
+        throw new Error('Không tìm thấy bài kiểm tra');
+      }
+      
+      const updatedExam = await Exam.findByIdAndUpdate(
+        examId,
+        examData,
+        { new: true }
+      );
+      
+      return updatedExam;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Xóa bài kiểm tra
+   */
+  async deleteExam(examId) {
+    try {
+      const exam = await Exam.findById(examId);
+      if (!exam) {
+        throw new Error('Không tìm thấy bài kiểm tra');
+      }
+      
+      // Xóa tất cả câu hỏi liên quan
+      await Question.deleteMany({ examId });
+      
+      // Xóa bài kiểm tra
+      await Exam.findByIdAndDelete(examId);
+      
+      return { message: 'Xóa bài kiểm tra thành công' };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy bài kiểm tra kèm tất cả câu hỏi
+   */
+  async getExamWithQuestions(examId) {
+    try {
+      const exam = await Exam.findById(examId);
+      if (!exam) {
+        throw new Error('Không tìm thấy bài kiểm tra');
+      }
+      
+      const questions = await Question.find({ examId });
+      
+      return {
+        ...exam.toObject(),
+        questions
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+}
+
+export default new ExamService();
+```
+
+```typescript:src/service/exam.service.ts
+import { Schema } from "mongoose";
+import Exam from "../models/exam";
+import Question from "../models/question";
+import Product from "../models/products";
+
+interface ExamData {
+  name: string;
+  description?: string;
+  duration: number;
+  status?: string;
+}
+
+class ExamService {
+  /**
+   * Lấy danh sách bài kiểm tra theo sản phẩm
+   */
+  async getExamsByProduct(productId: Schema.Types.ObjectId | string, page: number = 1, limit: number = 10) {
+    try {
+      // Kiểm tra sản phẩm tồn tại
+      const product = await Product.findById(productId);
+      if (!product) {
+        throw new Error('Không tìm thấy sản phẩm');
+      }
+      
+      const skip = (page - 1) * limit;
+      const exams = await Exam.find({ productId })
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+        
+      const total = await Exam.countDocuments({ productId });
+      
+      return {
+        data: exams,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy thông tin bài kiểm tra theo ID
+   */
+  async getExamById(examId: Schema.Types.ObjectId | string) {
+    try {
+      const exam = await Exam.findById(examId);
+      if (!exam) {
+        throw new Error('Không tìm thấy bài kiểm tra');
+      }
+      return exam;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Tạo bài kiểm tra mới
+   */
+  async createExam(productId: Schema.Types.ObjectId | string, examData: ExamData) {
+    try {
+      // Kiểm tra sản phẩm tồn tại
+      const product = await Product.findById(productId);
+      if (!product) {
+        throw new Error('Không tìm thấy sản phẩm');
+      }
+      
+      const newExam = await Exam.create({
+        ...examData,
+        productId
+      });
+      
+      return newExam;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Cập nhật bài kiểm tra
+   */
+  async updateExam(examId: Schema.Types.ObjectId | string, examData: Partial<ExamData>) {
+    try {
+      const exam = await Exam.findById(examId);
+      if (!exam) {
+        throw new Error('Không tìm thấy bài kiểm tra');
+      }
+      
+      const updatedExam = await Exam.findByIdAndUpdate(
+        examId,
+        examData,
+        { new: true }
+      );
+      
+      return updatedExam;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Xóa bài kiểm tra
+   */
+  async deleteExam(examId: Schema.Types.ObjectId | string) {
+    try {
+      const exam = await Exam.findById(examId);
+      if (!exam) {
+        throw new Error('Không tìm thấy bài kiểm tra');
+      }
+      
+      // Xóa tất cả câu hỏi liên quan
+      await Question.deleteMany({ examId });
+      
+      // Xóa bài kiểm tra
+      await Exam.findByIdAndDelete(examId);
+      
+      return { message: 'Xóa bài kiểm tra thành công' };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy bài kiểm tra kèm tất cả câu hỏi
+   */
+  async getExamWithQuestions(examId: Schema.Types.ObjectId | string) {
+    try {
+      const exam = await Exam.findById(examId);
+      if (!exam) {
+        throw new Error('Không tìm thấy bài kiểm tra');
+      }
+      
+      const questions = await Question.find({ examId });
+      
+      return {
+        ...exam.toObject(),
+        questions
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+}
+
+export default new ExamService();
+```
+
+```typescript:src/service/question.service.ts
+import { Schema } from "mongoose";
+import Question from "../models/question";
+import Exam from "../models/exam";
+
+interface AnswerData {
+  text: string;
+  isCorrect: boolean;
+  order?: number;
+}
+
+interface QuestionData {
+  text: string;
+  image?: string;
+  answers: AnswerData[];
+  difficulty?: string;
+}
+
+class QuestionService {
+  /**
+   * Lấy danh sách câu hỏi theo bài kiểm tra
+   */
+  async getQuestionsByExam(examId: Schema.Types.ObjectId | string, page: number = 1, limit: number = 20) {
+    try {
+      // Kiểm tra bài kiểm tra tồn tại
+      const exam = await Exam.findById(examId);
+      if (!exam) {
+        throw new Error('Không tìm thấy bài kiểm tra');
+      }
+      
+      const skip = (page - 1) * limit;
+      const questions = await Question.find({ examId })
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+        
+      const total = await Question.countDocuments({ examId });
+      
+      return {
+        data: questions,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy thông tin câu hỏi theo ID
+   */
+  async getQuestionById(questionId: Schema.Types.ObjectId | string) {
+    try {
+      const question = await Question.findById(questionId);
+      if (!question) {
+        throw new Error('Không tìm thấy câu hỏi');
+      }
+      return question;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Tạo câu hỏi mới
+   */
+  async createQuestion(examId: Schema.Types.ObjectId | string, questionData: QuestionData) {
+    try {
+      // Kiểm tra bài kiểm tra tồn tại
+      const exam = await Exam.findById(examId);
+      if (!exam) {
+        throw new Error('Không tìm thấy bài kiểm tra');
+      }
+      
+      // Xác thực dữ liệu câu trả lời
+      if (!questionData.answers || questionData.answers.length < 2) {
+        throw new Error('Câu hỏi phải có ít nhất 2 câu trả lời');
+      }
+      
+      const hasCorrectAnswer = questionData.answers.some(answer => answer.isCorrect);
+      if (!hasCorrectAnswer) {
+        throw new Error('Phải có ít nhất 1 câu trả lời đúng');
+      }
+      
+      const newQuestion = await Question.create({
+        ...questionData,
+        examId
+      });
+      
+      return newQuestion;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Cập nhật câu hỏi
+   */
+  async updateQuestion(questionId: Schema.Types.ObjectId | string, questionData: Partial<QuestionData>) {
+    try {
+      const question = await Question.findById(questionId);
+      if (!question) {
+        throw new Error('Không tìm thấy câu hỏi');
+      }
+      
+      // Xác thực dữ liệu câu trả lời nếu được cung cấp
+      if (questionData.answers) {
+        if (questionData.answers.length < 2) {
+          throw new Error('Câu hỏi phải có ít nhất 2 câu trả lời');
+        }
+        
+        const hasCorrectAnswer = questionData.answers.some(answer => answer.isCorrect);
+        if (!hasCorrectAnswer) {
+          throw new Error('Phải có ít nhất 1 câu trả lời đúng');
+        }
+      }
+      
+      const updatedQuestion = await Question.findByIdAndUpdate(
+        questionId,
+        questionData,
+        { new: true }
+      );
+      
+      return updatedQuestion;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Xóa câu hỏi
+   */
+  async deleteQuestion(questionId: Schema.Types.ObjectId | string) {
+    try {
+      const question = await Question.findById(questionId);
+      if (!question) {
+        throw new Error('Không tìm thấy câu hỏi');
+      }
+      
+      await Question.findByIdAndDelete(questionId);
+      
+      return { message: 'Xóa câu hỏi thành công' };
+    } catch (error) {
+      throw error;
+    }
+  }
+}
+
+export default new QuestionService();
+```
+## 3. Tạo Controllers
+
+```typescript:src/controllers/exam.controller.ts
+import { Request, Response } from "express";
+import examService from "../service/exam.service";
+import { handleError } from "../util/errorhandler";
+
+class ExamController {
+  /**
+   * Lấy danh sách bài kiểm tra theo sản phẩm
+   */
+  async getExamsByProduct(req: Request, res: Response) {
+    try {
+      const { productId } = req.params;
+      const { page = 1, limit = 10 } = req.query;
+      
+      const result = await examService.getExamsByProduct(
+        productId,
+        Number(page),
+        Number(limit)
+      );
+      
+      return res.status(200).json(result);
+    } catch (error) {
+      return handleError(error, req, res);
+    }
+  }
+
+  /**
+   * Lấy thông tin bài kiểm tra theo ID
+   */
+  async getExamById(req: Request, res: Response) {
+    try {
+      const { examId } = req.params;
+      const exam = await examService.getExamById(examId);
+      
+      return res.status(200).json(exam);
+    } catch (error) {
+      return handleError(error, req, res);
+    }
+  }
+
+  /**
+   * Tạo bài kiểm tra mới
+   */
+  async createExam(req: Request, res: Response) {
+    try {
+      const { productId } = req.params;
+      const examData = req.body;
+      
+      const newExam = await examService.createExam(productId, examData);
+      
+      return res.status(201).json(newExam);
+    } catch (error) {
+      return handleError(error, req, res);
+    }
+  }
+
+  /**
+   * Cập nhật bài kiểm tra
+   */
+  async updateExam(req: Request, res: Response) {
+    try {
+      const { examId } = req.params;
+      const examData = req.body;
+      
+      const updatedExam = await examService.updateExam(examId, examData);
+      
+      return res.status(200).json(updatedExam);
+    } catch (error) {
+      return handleError(error, req, res);
+    }
+  }
+
+  /**
+   * Xóa bài kiểm tra
+   */
+  async deleteExam(req: Request, res: Response) {
+    try {
+      const { examId } = req.params;
+      
+      const result = await examService.deleteExam(examId);
+      
+      return res.status(200).json(result);
+    } catch (error) {
+      return handleError(error, req, res);
+    }
+  }
+
+  /**
+   * Lấy bài kiểm tra kèm tất cả câu hỏi
+   */
+  async getExamWithQuestions(req: Request, res: Response) {
+    try {
+      const { examId } = req.params;
+      
+      const result = await examService.getExamWithQuestions(examId);
+      
+      return res.status(200).json(result);
+    } catch (error) {
+      return handleError(error, req, res);
+    }
+  }
+}
+
+export default new ExamController();
+```
+
+```typescript:src/controllers/question.controller.ts
+import { Request, Response } from "express";
+import questionService from "../service/question.service";
+import { handleError } from "../util/errorhandler";
+
+class QuestionController {
+  /**
+   * Lấy danh sách câu hỏi theo bài kiểm tra
+   */
+  async getQuestionsByExam(req: Request, res: Response) {
+    try {
+      const { examId } = req.params;
+      const { page = 1, limit = 20 } = req.query;
+      
+      const result = await questionService.getQuestionsByExam(
+        examId,
+        Number(page),
+        Number(limit)
+      );
+      
+      return res.status(200).json(result);
+    } catch (error) {
+      return handleError(error, req, res);
+    }
+  }
+
+  /**
+   * Lấy thông tin câu hỏi theo ID
+   */
+  async getQuestionById(req: Request, res: Response) {
+    try {
+      const { questionId } = req.params;
+      const question = await questionService.getQuestionById(questionId);
+      
+      return res.status(200).json(question);
+    } catch (error) {
+      return handleError(error, req, res);
+    }
+  }
+
+  /**
+   * Tạo câu hỏi mới
+   */
+  async createQuestion(req: Request, res: Response) {
+    try {
+      const { examId } = req.params;
+      const questionData = req.body;
+      
+      const newQuestion = await questionService.createQuestion(examId, questionData);
+      
+      return res.status(201).json(newQuestion);
+    } catch (error) {
+      return handleError(error, req, res);
+    }
+  }
+
+  /**
+   * Cập nhật câu hỏi
+   */
+  async updateQuestion(req: Request, res: Response) {
+    try {
+      const { questionId } = req.params;
+      const questionData = req.body;
+      
+      const updatedQuestion = await questionService.updateQuestion(questionId, questionData);
+      
+      return res.status(200).json(updatedQuestion);
+    } catch (error) {
+      return handleError(error, req, res);
+    }
+  }
+
+  /**
+   * Xóa câu hỏi
+   */
+  async deleteQuestion(req: Request, res: Response) {
+    try {
+      const { questionId } = req.params;
+      
+      const result = await questionService.deleteQuestion(questionId);
+      
+      return res.status(200).json(result);
+    } catch (error) {
+      return handleError(error, req, res);
+    }
+  }
+}
+
+export default new QuestionController();
+```
+Hãy kiểm tra nội dung file errorhandler để sửa lỗi:
+
+Read file: src/util/errorhandler.ts
+
+```typescript:src/controllers/exam.controller.ts
+import { Request, Response } from "express";
+import examService from "../service/exam.service";
+import { responseError } from "../util/errorhandler";
+
+class ExamController {
+  /**
+   * Lấy danh sách bài kiểm tra theo sản phẩm
+   */
+  async getExamsByProduct(req: Request, res: Response) {
+    try {
+      const { productId } = req.params;
+      const { page = 1, limit = 10 } = req.query;
+      
+      const result = await examService.getExamsByProduct(
+        productId,
+        Number(page),
+        Number(limit)
+      );
+      
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return responseError(res, error.message, 400);
+    }
+  }
+
+  /**
+   * Lấy thông tin bài kiểm tra theo ID
+   */
+  async getExamById(req: Request, res: Response) {
+    try {
+      const { examId } = req.params;
+      const exam = await examService.getExamById(examId);
+      
+      return res.status(200).json(exam);
+    } catch (error: any) {
+      return responseError(res, error.message, 400);
+    }
+  }
+
+  /**
+   * Tạo bài kiểm tra mới
+   */
+  async createExam(req: Request, res: Response) {
+    try {
+      const { productId } = req.params;
+      const examData = req.body;
+      
+      const newExam = await examService.createExam(productId, examData);
+      
+      return res.status(201).json(newExam);
+    } catch (error: any) {
+      return responseError(res, error.message, 400);
+    }
+  }
+
+  /**
+   * Cập nhật bài kiểm tra
+   */
+  async updateExam(req: Request, res: Response) {
+    try {
+      const { examId } = req.params;
+      const examData = req.body;
+      
+      const updatedExam = await examService.updateExam(examId, examData);
+      
+      return res.status(200).json(updatedExam);
+    } catch (error: any) {
+      return responseError(res, error.message, 400);
+    }
+  }
+
+  /**
+   * Xóa bài kiểm tra
+   */
+  async deleteExam(req: Request, res: Response) {
+    try {
+      const { examId } = req.params;
+      
+      const result = await examService.deleteExam(examId);
+      
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return responseError(res, error.message, 400);
+    }
+  }
+
+  /**
+   * Lấy bài kiểm tra kèm tất cả câu hỏi
+   */
+  async getExamWithQuestions(req: Request, res: Response) {
+    try {
+      const { examId } = req.params;
+      
+      const result = await examService.getExamWithQuestions(examId);
+      
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return responseError(res, error.message, 400);
+    }
+  }
+}
+
+export default new ExamController();
+```
+
+```typescript:src/controllers/question.controller.ts
+import { Request, Response } from "express";
+import questionService from "../service/question.service";
+import { responseError } from "../util/errorhandler";
+
+class QuestionController {
+  /**
+   * Lấy danh sách câu hỏi theo bài kiểm tra
+   */
+  async getQuestionsByExam(req: Request, res: Response) {
+    try {
+      const { examId } = req.params;
+      const { page = 1, limit = 20 } = req.query;
+      
+      const result = await questionService.getQuestionsByExam(
+        examId,
+        Number(page),
+        Number(limit)
+      );
+      
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return responseError(res, error.message, 400);
+    }
+  }
+
+  /**
+   * Lấy thông tin câu hỏi theo ID
+   */
+  async getQuestionById(req: Request, res: Response) {
+    try {
+      const { questionId } = req.params;
+      const question = await questionService.getQuestionById(questionId);
+      
+      return res.status(200).json(question);
+    } catch (error: any) {
+      return responseError(res, error.message, 400);
+    }
+  }
+
+  /**
+   * Tạo câu hỏi mới
+   */
+  async createQuestion(req: Request, res: Response) {
+    try {
+      const { examId } = req.params;
+      const questionData = req.body;
+      
+      const newQuestion = await questionService.createQuestion(examId, questionData);
+      
+      return res.status(201).json(newQuestion);
+    } catch (error: any) {
+      return responseError(res, error.message, 400);
+    }
+  }
+
+  /**
+   * Cập nhật câu hỏi
+   */
+  async updateQuestion(req: Request, res: Response) {
+    try {
+      const { questionId } = req.params;
+      const questionData = req.body;
+      
+      const updatedQuestion = await questionService.updateQuestion(questionId, questionData);
+      
+      return res.status(200).json(updatedQuestion);
+    } catch (error: any) {
+      return responseError(res, error.message, 400);
+    }
+  }
+
+  /**
+   * Xóa câu hỏi
+   */
+  async deleteQuestion(req: Request, res: Response) {
+    try {
+      const { questionId } = req.params;
+      
+      const result = await questionService.deleteQuestion(questionId);
+      
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return responseError(res, error.message, 400);
+    }
+  }
+}
+
+export default new QuestionController();
+```
+## 4. Tạo Routes
+
+```typescript:src/routes/exam.route.ts
+import express from "express";
+import examController from "../controllers/exam.controller";
+
+const router = express.Router();
+
+// Lấy bài kiểm tra theo ID
+router.get("/:examId", examController.getExamById);
+
+// Cập nhật bài kiểm tra
+router.put("/:examId", examController.updateExam);
+
+// Xóa bài kiểm tra
+router.delete("/:examId", examController.deleteExam);
+
+// Lấy bài kiểm tra kèm tất cả câu hỏi
+router.get("/:examId/full", examController.getExamWithQuestions);
+
+export default router;
+```
+
+```typescript:src/routes/product.route.ts
+
+```
+
+Read file: src/routes/product.route.ts
+
+Read file: src/util/asynHandler.ts
+
+```typescript:src/routes/product.route.ts
+import express from "express";
+import ProductController from "../controllers/product.controller";
+import examController from "../controllers/exam.controller";
+import asyncHandler from "../util/asynHandler";
+
+const router = express.Router();
+const productController = new ProductController();
+
+router.post("/", asyncHandler(productController.createProduct));
+// router.get("/:id", asyncHandler(productController.getProductById));
+router.get("/all", asyncHandler(productController.getListProducts));
+router.patch("/:id", asyncHandler(productController.updateProduct));
+router.delete("/:id", asyncHandler(productController.deleteProduct));
+
+// Exam routes related to products
+router.get("/:productId/exams", asyncHandler(examController.getExamsByProduct));
+router.post("/:productId/exams", asyncHandler(examController.createExam));
+
+export default router;
+```
+
+```typescript:src/routes/question.route.ts
+import express from "express";
+import questionController from "../controllers/question.controller";
+import asyncHandler from "../util/asynHandler";
+
+const router = express.Router();
+
+// Lấy thông tin câu hỏi theo ID
+router.get("/:questionId", asyncHandler(questionController.getQuestionById));
+
+// Cập nhật câu hỏi
+router.put("/:questionId", asyncHandler(questionController.updateQuestion));
+
+// Xóa câu hỏi
+router.delete("/:questionId", asyncHandler(questionController.deleteQuestion));
+
+export default router;
+```
+
+```typescript:src/routes/exam.route.ts
+import express from "express";
+import examController from "../controllers/exam.controller";
+import questionController from "../controllers/question.controller";
+import asyncHandler from "../util/asynHandler";
+
+const router = express.Router();
+
+// Lấy bài kiểm tra theo ID
+router.get("/:examId", asyncHandler(examController.getExamById));
+
+// Cập nhật bài kiểm tra
+router.put("/:examId", asyncHandler(examController.updateExam));
+
+// Xóa bài kiểm tra
+router.delete("/:examId", asyncHandler(examController.deleteExam));
+
+// Lấy bài kiểm tra kèm tất cả câu hỏi
+router.get("/:examId/full", asyncHandler(examController.getExamWithQuestions));
+
+// Routes cho questions liên quan đến exam
+router.get("/:examId/questions", asyncHandler(questionController.getQuestionsByExam));
+router.post("/:examId/questions", asyncHandler(questionController.createQuestion));
+
+export default router;
+```
+
+```typescript:src/routes/index.ts
+
+```
+
+Read file: src/routes/index.ts
+
+```typescript:src/routes/index.ts
+import express from "express";
+import productRouter from "./product.route";
+import orderRouter from "./order.route";
+import customerRouter from "./customer.route";
+import examRouter from "./exam.route";
+import questionRouter from "./question.route";
+
+const router = express.Router();
+
+router.use("/products", productRouter);
+router.use("/orders", orderRouter);
+router.use("/customers", customerRouter);
+router.use("/exams", examRouter);
+router.use("/questions", questionRouter);
+
+export default router;
+```
+Đã hoàn thành việc áp dụng thiết kế vào dự án của bạn. Dưới đây là tóm tắt về những gì đã được triển khai:
+
+## Các file đã tạo và cập nhật:
+
+1. **Models:**
+   - `src/models/exam.ts` - Schema cho bài kiểm tra
+   - `src/models/question.ts` - Schema cho câu hỏi với các câu trả lời
+
+2. **Services:**
+   - `src/service/exam.service.ts` - Service xử lý logic nghiệp vụ cho bài kiểm tra
+   - `src/service/question.service.ts` - Service xử lý logic nghiệp vụ cho câu hỏi
+
+3. **Controllers:**
+   - `src/controllers/exam.controller.ts` - Controller xử lý request/response cho bài kiểm tra
+   - `src/controllers/question.controller.ts` - Controller xử lý request/response cho câu hỏi
+
+4. **Routes:**
+   - `src/routes/exam.route.ts` - Routes cho bài kiểm tra
+   - `src/routes/question.route.ts` - Routes cho câu hỏi
+   - Cập nhật `src/routes/product.route.ts` để thêm routes liên quan đến bài kiểm tra của sản phẩm
+   - Cập nhật `src/routes/index.ts` để đăng ký các routes mới
+
+## API Endpoints đã triển khai:
+
+1. **Exam API:**
+   - `GET /products/:productId/exams` - Lấy danh sách bài kiểm tra theo sản phẩm
+   - `POST /products/:productId/exams` - Tạo bài kiểm tra mới cho sản phẩm
+   - `GET /exams/:examId` - Lấy thông tin bài kiểm tra theo ID
+   - `PUT /exams/:examId` - Cập nhật bài kiểm tra
+   - `DELETE /exams/:examId` - Xóa bài kiểm tra
+   - `GET /exams/:examId/full` - Lấy bài kiểm tra kèm tất cả câu hỏi
+
+2. **Question API:**
+   - `GET /exams/:examId/questions` - Lấy danh sách câu hỏi theo bài kiểm tra
+   - `POST /exams/:examId/questions` - Tạo câu hỏi mới cho bài kiểm tra
+   - `GET /questions/:questionId` - Lấy thông tin câu hỏi theo ID
+   - `PUT /questions/:questionId` - Cập nhật câu hỏi
+   - `DELETE /questions/:questionId` - Xóa câu hỏi
+
+Với các tính năng đã triển khai, bạn có thể:
+- Quản lý các bài kiểm tra cho các sản phẩm
+- Quản lý câu hỏi cho các bài kiểm tra
+- Tìm kiếm, phân trang và truy xuất thông tin đầy đủ
+
+Để sử dụng các API mới, bạn cần khởi động lại server:
+
+```bash
+npm run dev
+```

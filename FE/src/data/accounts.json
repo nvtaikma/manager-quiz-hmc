@@ -1,0 +1,14 @@
+{
+  "accounts": [
+    {
+      "id": "1",
+      "username": "admin",
+      "password": "123456",
+      "email": "admin@example.com",
+      "role": "admin",
+      "active": true,
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "lastLogin": "2026-01-30T05:02:48.583Z"
+    }
+  ]
+}

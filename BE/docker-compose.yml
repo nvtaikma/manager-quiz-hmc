@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  api:
+    image: nvtaikma/quizizz-app:BE-manager
+    container_name: be-manager
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGODB_URI=mongodb://host.docker.internal:27017/google-auth
+      - CORS_ORIGIN=*
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+    driver: local
