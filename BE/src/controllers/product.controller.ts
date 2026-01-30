@@ -50,6 +50,12 @@ class ProductController {
     const product = await ProductService.deleteProduct(data);
     return responseSuccess(res, product);
   }
+
+  async syncQuestionCounts(req: Request, res: Response) {
+    const productId = req.params.id;
+    const result = await ProductService.syncQuestionCounts(productId);
+    return responseSuccess(res, "Synced question counts successfully", result);
+  }
 }
 
 export default ProductController;

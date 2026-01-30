@@ -11,6 +11,7 @@ router.get("/:id", asyncHandler(productController.getProductById));
 router.get("/all/full", asyncHandler(productController.getListProducts));
 router.patch("/:id", asyncHandler(productController.updateProduct));
 router.delete("/:id", asyncHandler(productController.deleteProduct));
+router.put("/:id/sync-question-counts", asyncHandler(productController.syncQuestionCounts));
 
 // Exam routes related to products
 router.get("/:productId/exams", asyncHandler(examController.getExamsByProduct));

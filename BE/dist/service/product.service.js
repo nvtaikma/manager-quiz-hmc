@@ -13,6 +13,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const products_1 = __importDefault(require("../models/products"));
+const exam_1 = __importDefault(require("../models/exam"));
+const question_1 = __importDefault(require("../models/question"));
 class ProductService {
     getProduct(_a) {
         return __awaiter(this, arguments, void 0, function* ({ id }) {
@@ -67,6 +69,39 @@ class ProductService {
                 .select("-__v -createdAt -updatedAt -status")
                 .lean();
             return result;
+        });
+    }
+    syncQuestionCounts(productId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // 1. Get all exams for this product
+                const exams = yield exam_1.default.find({ productId });
+                let totalQuestions = 0;
+                const updatedExams = [];
+                // 2. Iterate through each exam
+                for (const exam of exams) {
+                    // Count questions for this exam
+                    const count = yield question_1.default.countDocuments({ examId: exam._id });
+                    // Update exam with new count
+                    yield exam_1.default.findByIdAndUpdate(exam._id, { count });
+                    updatedExams.push(Object.assign(Object.assign({}, exam.toObject()), { count }));
+                    // Add to total if exam is active (optional logic, but usually total counts everything available)
+                    // Or should we count everything? Let's count everything for now to reflect true data size
+                    // If we only want 'active' questions, we should filter questions or exams.
+                    // Requirement says "Update countQuestion field in Product", usually means total capacity.
+                    totalQuestions += count;
+                }
+                // 3. Update Product with total count
+                const updatedProduct = yield products_1.default.findByIdAndUpdate(productId, { countQuestion: totalQuestions }, { new: true });
+                return {
+                    product: updatedProduct,
+                    exams: updatedExams,
+                };
+            }
+            catch (error) {
+                console.error("Error syncing question counts:", error);
+                throw error;
+            }
         });
     }
 }

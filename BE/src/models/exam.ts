@@ -25,6 +25,10 @@ const examSchema = new Schema(
       enum: ["active", "inactive", "draft"],
       default: "active",
     },
+    count: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,

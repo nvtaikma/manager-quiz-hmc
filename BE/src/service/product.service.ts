@@ -3,6 +3,8 @@ import {
   ProductRequestBody,
 } from "../contant/product";
 import Product from "../models/products";
+import Exam from "../models/exam";
+import Question from "../models/question";
 
 class ProductService {
   async getProduct({ id }: { id: string }) {
@@ -60,6 +62,51 @@ class ProductService {
       .select("-__v -createdAt -updatedAt -status")
       .lean();
     return result;
+  }
+
+  async syncQuestionCounts(productId: string) {
+    try {
+      // 1. Get all exams for this product
+      const exams = await Exam.find({ productId });
+
+      let totalQuestions = 0;
+      const updatedExams = [];
+
+      // 2. Iterate through each exam
+      for (const exam of exams) {
+        // Count questions for this exam
+        const count = await Question.countDocuments({ examId: exam._id });
+
+        // Update exam with new count
+        await Exam.findByIdAndUpdate(exam._id, { count });
+        
+        updatedExams.push({
+          ...exam.toObject(),
+          count
+        });
+
+        // Add to total if exam is active (optional logic, but usually total counts everything available)
+        // Or should we count everything? Let's count everything for now to reflect true data size
+        // If we only want 'active' questions, we should filter questions or exams.
+        // Requirement says "Update countQuestion field in Product", usually means total capacity.
+        totalQuestions += count;
+      }
+
+      // 3. Update Product with total count
+      const updatedProduct = await Product.findByIdAndUpdate(
+        productId,
+        { countQuestion: totalQuestions },
+        { new: true }
+      );
+
+      return {
+        product: updatedProduct,
+        exams: updatedExams,
+      };
+    } catch (error) {
+      console.error("Error syncing question counts:", error);
+      throw error;
+    }
   }
 }
 

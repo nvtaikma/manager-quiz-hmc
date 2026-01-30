@@ -41,7 +41,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Pencil, Trash2, Plus, ArrowLeft, BookOpen } from "lucide-react";
+import { Pencil, Trash2, Plus, ArrowLeft, BookOpen, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { Textarea } from "@/components/ui/textarea";
@@ -278,6 +278,42 @@ export function ExamManager({ productId }: { productId: string }) {
     }
   };
 
+  // Đồng bộ số lượng câu hỏi
+  const handleSyncCounts = async () => {
+    try {
+      setActionLoading(true);
+      const response = await fetch(
+        `${API_BASE_URL}/products/${productId}/sync-question-counts`,
+        {
+          method: "PUT",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Không thể đồng bộ số lượng câu hỏi");
+      }
+
+      // Reload data to reflect changes
+      await Promise.all([fetchExams(), fetchProduct()]);
+      
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật số lượng câu hỏi thành công.",
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Lỗi không xác định";
+      console.error("Lỗi khi đồng bộ:", errorMessage);
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật số lượng câu hỏi. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Chuyển đổi trạng thái đề thi sang text hiển thị
   const getStatusText = (status: string) => {
     switch (status) {
@@ -336,6 +372,14 @@ export function ExamManager({ productId }: { productId: string }) {
             onClick={() => router.push(`/product-syllabus/${productId}`)}
           >
             <BookOpen className="mr-2 h-4 w-4" /> Xem toàn bộ câu hỏi
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleSyncCounts}
+            disabled={actionLoading}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${actionLoading ? "animate-spin" : ""}`} /> 
+            Cập nhật số câu
           </Button>
           <Button
             variant="outline"

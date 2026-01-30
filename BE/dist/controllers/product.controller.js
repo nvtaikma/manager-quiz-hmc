@@ -57,5 +57,12 @@ class ProductController {
             return (0, errorhandler_1.responseSuccess)(res, product);
         });
     }
+    syncQuestionCounts(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const productId = req.params.id;
+            const result = yield product_service_1.default.syncQuestionCounts(productId);
+            return (0, errorhandler_1.responseSuccess)(res, "Synced question counts successfully", result);
+        });
+    }
 }
 exports.default = ProductController;
