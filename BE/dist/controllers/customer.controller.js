@@ -88,5 +88,15 @@ class CustomerController {
             });
         });
     }
+    getCustomerSession(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { id } = req.params;
+            const session = yield customers_service_1.default.getCustomerSession(id);
+            return res.json({
+                message: "Customer session fetched successfully",
+                data: session,
+            });
+        });
+    }
 }
 exports.default = new CustomerController();

@@ -68,6 +68,15 @@ class CustomerController {
       data: customers,
     });
   }
+
+  async getCustomerSession(req: Request, res: Response) {
+    const { id } = req.params as { id: string };
+    const session = await CustomersService.getCustomerSession(id);
+    return res.json({
+      message: "Customer session fetched successfully",
+      data: session,
+    });
+  }
 }
 
 export default new CustomerController();

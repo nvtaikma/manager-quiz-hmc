@@ -21,5 +21,7 @@ router.get(
   asyncHandler(CustomerController.getCountCustomerInactive)
 );
 
+router.get("/:id/session", asyncHandler(CustomerController.getCustomerSession));
+
 router.get("/search", asyncHandler(CustomerController.searchCustomer));
 export default router;

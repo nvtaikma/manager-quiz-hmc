@@ -1,4 +1,6 @@
 import Customer from "../models/customers";
+import User from "../models/User";
+import redis from "../dbs/redis";
 
 class CustomersService {
   async createCustomer({ name, email }: { name: string; email: string }) {
@@ -94,6 +96,31 @@ class CustomersService {
 
   async getCountCustomerInactive() {
     return await Customer.countDocuments({ status: "inactive" });
+  }
+
+  async getCustomerSession(customerId: string) {
+    if (!customerId) return null;
+    
+    // 1. Find Customer to get email
+    const customer = await Customer.findById(customerId);
+    if (!customer || !customer.email) return null;
+
+    // 2. Find User by email to get Auth ID
+    // Some Customers might not have a linked User account yet
+    const user = await User.findOne({ email: customer.email });
+    if (!user) return null;
+    
+    const userId = user?._id?.toString();
+
+    // 3. Get active token from key "user_active_token:{userId}"
+    const token = await redis.get(`user_active_token:${userId}`);
+
+    if (!token) return null;
+
+    // 4. Get session details from key "session:{token}"
+    const sessionData = await redis.get(`session:${token}`);
+    
+    return sessionData ? JSON.parse(sessionData) : null;
   }
 }
 

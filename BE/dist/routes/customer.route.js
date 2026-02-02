@@ -13,5 +13,6 @@ router.patch("/:id/status", (0, asynHandler_1.default)(customer_controller_1.def
 router.get("/list", (0, asynHandler_1.default)(customer_controller_1.default.getListCustomer));
 router.get("/count/active", (0, asynHandler_1.default)(customer_controller_1.default.getCountCustomerActive));
 router.get("/count/inactive", (0, asynHandler_1.default)(customer_controller_1.default.getCountCustomerInactive));
+router.get("/:id/session", (0, asynHandler_1.default)(customer_controller_1.default.getCustomerSession));
 router.get("/search", (0, asynHandler_1.default)(customer_controller_1.default.searchCustomer));
 exports.default = router;

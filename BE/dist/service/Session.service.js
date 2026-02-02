@@ -12,21 +12,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const mongoose_1 = __importDefault(require("mongoose"));
-const Session_1 = __importDefault(require("../models/Session"));
+const redis_1 = __importDefault(require("../dbs/redis"));
 class SessionService {
     getSessionByUserId(_a) {
         return __awaiter(this, arguments, void 0, function* ({ userId }) {
-            // chuyển userId thành objectId
-            const userIdObjectId = new mongoose_1.default.Types.ObjectId(userId);
-            console.log(userIdObjectId);
-            const session = yield Session_1.default.find({ userId: userIdObjectId })
-                .sort({
-                createdAt: -1,
-            })
-                .select("-__v -updatedAt -_id -expiresAt -token -clientId  -isActive -isCurrentDevice -lastActive")
-                .lean();
-            return session;
+            // src/service/customers.service.ts
+            if (!userId)
+                return null;
+            // 1. Từ ID user -> Lấy Active Token
+            const token = yield redis_1.default.get(`user_active_token:${userId}`);
+            if (!token)
+                return null;
+            // 2. Từ Token -> Lấy thông tin Session (JWT detail)
+            const sessionData = yield redis_1.default.get(`session:${token}`);
+            // 3. Trả về thông tin cho giao diện
+            return sessionData ? JSON.parse(sessionData) : null;
         });
     }
 }

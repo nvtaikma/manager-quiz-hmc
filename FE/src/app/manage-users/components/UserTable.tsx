@@ -39,6 +39,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import UserSessionModal from "./UserSessionModal";
 
 interface User {
   _id: string;
@@ -167,36 +168,10 @@ export function UserTable({
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
-  // Fetch sessions data
-  const fetchSessions = async (email: string) => {
-    try {
-      setSessionsLoading(true);
-      const responseUser = await fetch(`${API_BASE_URL}/users/${email}`);
-      if (!responseUser.ok) {
-        throw new Error("Không thể tải dữ liệu người dùng");
-      }
-      const dataUser = await responseUser.json();
-
-      const userId = dataUser?.data?._id;
-
-      const response = await fetch(`${API_BASE_URL}/sessions/${userId}`);
-      if (!response.ok) {
-        throw new Error("Không thể tải dữ liệu phiên đăng nhập");
-      }
-      const data = await response.json();
-      setSessionsData(data.data || []);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Lỗi không xác định";
-      console.error("Lỗi khi tải sessions:", errorMessage);
-      toast({
-        title: "Lỗi",
-        description: "Không thể tải dữ liệu phiên đăng nhập. Vui lòng thử lại.",
-        variant: "destructive",
-      });
-    } finally {
-      setSessionsLoading(false);
-    }
+  // Handle view sessions
+  const handleViewSessions = (user: User) => {
+    setSelectedUserForSessions(user);
+    setShowSessionsModal(true);
   };
 
   // Fetch exam history data
@@ -233,30 +208,6 @@ export function UserTable({
     }
   };
 
-  // Fetch practice history data (cũ - không dùng)
-  const fetchPracticeHistory = async (email: string) => {
-    try {
-      // lấy user _id từ email
-      const responseUser = await fetch(`${API_BASE_URL}/users/${email}`);
-      if (!responseUser.ok) {
-        throw new Error("Không thể tải dữ liệu người dùng");
-      }
-      const dataUser = await responseUser.json();
-      const userId = dataUser?.data?._id;
-      const response = await fetch(
-        `${API_BASE_URL}/practice-histories/${userId}`
-      );
-      if (!response.ok) {
-        throw new Error("Không thể tải dữ liệu lịch sử luyện tập");
-      }
-      const data = await response.json();
-      return data.data || [];
-    } catch (error) {
-      console.error("Lỗi khi tải practice history:", error);
-      return [];
-    }
-  };
-
   // Fetch practice exam history data
   const fetchPracticeExamHistory = async (email: string) => {
     try {
@@ -290,13 +241,6 @@ export function UserTable({
     } finally {
       setPracticeHistoryLoading(false);
     }
-  };
-
-  // Handle view sessions
-  const handleViewSessions = (user: User) => {
-    setSelectedUserForSessions(user);
-    setShowSessionsModal(true);
-    fetchSessions(user.email);
   };
 
   // Handle view exam history
@@ -460,78 +404,12 @@ export function UserTable({
         </TableBody>
       </Table>
 
-      {/* Sessions Modal */}
-      <Dialog open={showSessionsModal} onOpenChange={setShowSessionsModal}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Monitor className="h-5 w-5" />
-              Phiên đăng nhập - {selectedUserForSessions?.name}
-            </DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="max-h-[500px]">
-            {sessionsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-              </div>
-            ) : sessionsData.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Không có phiên đăng nhập nào
-              </div>
-            ) : (
-              <div className="space-y-4 pr-4">
-                {sessionsData.map((session, index) => (
-                  <div key={index} className="border rounded-lg p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Monitor className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">Thiết bị:</span>
-                          <Badge variant="outline">
-                            {session.deviceInfo.deviceName}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Trình duyệt:</span>
-                          <span className="text-sm">
-                            {session.deviceInfo.browser}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Hệ điều hành:</span>
-                          <span className="text-sm">
-                            {session.deviceInfo.os}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">IP:</span>
-                          <Badge variant="secondary">
-                            {session.deviceInfo.ip}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">Thời gian:</span>
-                          <span className="text-sm">
-                            {formatDate(session.createdAt)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <Separator className="my-3" />
-                    <div className="text-xs text-muted-foreground">
-                      <strong>User Agent:</strong>{" "}
-                      {session.deviceInfo.userAgent}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+      <UserSessionModal 
+        isOpen={showSessionsModal}
+        onClose={() => setShowSessionsModal(false)}
+        userId={selectedUserForSessions?._id || null}
+        userName={selectedUserForSessions?.name || ""}
+      />
 
       {/* Exam History Modal */}
       <Dialog

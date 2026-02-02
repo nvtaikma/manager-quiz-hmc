@@ -13,6 +13,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const customers_1 = __importDefault(require("../models/customers"));
+const User_1 = __importDefault(require("../models/User"));
+const redis_1 = __importDefault(require("../dbs/redis"));
 class CustomersService {
     createCustomer(_a) {
         return __awaiter(this, arguments, void 0, function* ({ name, email }) {
@@ -106,6 +108,30 @@ class CustomersService {
     getCountCustomerInactive() {
         return __awaiter(this, void 0, void 0, function* () {
             return yield customers_1.default.countDocuments({ status: "inactive" });
+        });
+    }
+    getCustomerSession(customerId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            if (!customerId)
+                return null;
+            // 1. Find Customer to get email
+            const customer = yield customers_1.default.findById(customerId);
+            if (!customer || !customer.email)
+                return null;
+            // 2. Find User by email to get Auth ID
+            // Some Customers might not have a linked User account yet
+            const user = yield User_1.default.findOne({ email: customer.email });
+            if (!user)
+                return null;
+            const userId = (_a = user === null || user === void 0 ? void 0 : user._id) === null || _a === void 0 ? void 0 : _a.toString();
+            // 3. Get active token from key "user_active_token:{userId}"
+            const token = yield redis_1.default.get(`user_active_token:${userId}`);
+            if (!token)
+                return null;
+            // 4. Get session details from key "session:{token}"
+            const sessionData = yield redis_1.default.get(`session:${token}`);
+            return sessionData ? JSON.parse(sessionData) : null;
         });
     }
 }
