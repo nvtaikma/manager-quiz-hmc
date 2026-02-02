@@ -1,17 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Search, Calendar, Users } from "lucide-react";
+import { Plus, Search, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { API_BASE_URL, API_ENDPOINTS } from "@/contants/api";
 import AddClassModal from "@/components/classes/AddClassModal";
 import Link from "next/link";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
 
 interface ClassItem {
   _id: string;
   name: string;
+  lastTimetableUpdate?: string; // Date string
 }
 
 export default function ClassesPage() {
@@ -87,9 +90,16 @@ export default function ClassesPage() {
                     <CardTitle className="text-lg">{cls.name}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      Xem lịch học
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Xem lịch học
+                      </div>
+                       {cls.lastTimetableUpdate && (
+                        <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded inline-block">
+                          Cập nhật: {format(new Date(cls.lastTimetableUpdate), "dd/MM HH:mm", { locale: vi })}
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

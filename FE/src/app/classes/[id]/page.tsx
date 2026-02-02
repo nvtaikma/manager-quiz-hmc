@@ -35,6 +35,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
   const className = decodeURIComponent(resolvedParams.id);
   
   const [timetable, setTimetable] = useState<TimetableItem[]>([]);
+  const [classMeta, setClassMeta] = useState<{ lastTimetableUpdate?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
@@ -47,6 +48,9 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
       const data = await res.json();
       if (data.data) {
         setTimetable(data.data);
+      }
+      if (data.meta) {
+        setClassMeta(data.meta);
       }
     } catch (error) {
       console.error("Failed to fetch timetable", error);
@@ -72,7 +76,14 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
         </Link>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{className}</h1>
-          <p className="text-muted-foreground">Chi tiết thời khóa biểu</p>
+          <div className="flex items-center gap-2 text-muted-foreground">
+             <p>Chi tiết thời khóa biểu</p>
+             {classMeta?.lastTimetableUpdate && (
+                <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-100">
+                  Cập nhật: {format(new Date(classMeta.lastTimetableUpdate), "HH:mm dd/MM/yyyy", { locale: vi })}
+                </span>
+             )}
+          </div>
         </div>
         <div className="ml-auto">
           <Button onClick={() => setIsImportModalOpen(true)}>

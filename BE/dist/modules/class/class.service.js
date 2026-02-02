@@ -20,6 +20,11 @@ class ClassService {
             return yield class_models_1.default.find().sort({ name: 1 }).lean();
         });
     }
+    getClassByName(name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield class_models_1.default.findOne({ name }).lean();
+        });
+    }
     bulkCreateClasses(classNames) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!classNames || classNames.length === 0)
@@ -82,6 +87,8 @@ class ClassService {
             yield timetable_models_1.default.deleteMany({ ten_lop: { $in: classNames } });
             // 4. Insert new schedules
             const result = yield timetable_models_1.default.insertMany(formattedData);
+            // 5. Update lastTimetableUpdate for affected classes
+            yield class_models_1.default.updateMany({ name: { $in: classNames } }, { $set: { lastTimetableUpdate: new Date() } });
             return result;
         });
     }

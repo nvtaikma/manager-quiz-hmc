@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IClass extends Document {
   name: string;
+  lastTimetableUpdate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -9,6 +10,7 @@ export interface IClass extends Document {
 const ClassSchema: Schema = new Schema(
   {
     name: { type: String, required: true, unique: true, trim: true },
+    lastTimetableUpdate: { type: Date },
   },
   {
     timestamps: true,

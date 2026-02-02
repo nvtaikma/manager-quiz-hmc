@@ -22,6 +22,7 @@ const corsOptions = {
     "http://157.10.199.146:3001",
     "https://manager-fe.testhmc.site",
     "http://localhost:3001",
+    "https://sv.yhn.edu.vn"
   ],
   credentials: true,
 };

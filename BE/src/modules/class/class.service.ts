@@ -6,6 +6,10 @@ class ClassService {
     return await Class.find().sort({ name: 1 }).lean();
   }
 
+  async getClassByName(name: string) {
+    return await Class.findOne({ name }).lean();
+  }
+
   async bulkCreateClasses(classNames: string[]) {
     if (!classNames || classNames.length === 0) return [];
     
@@ -83,6 +87,12 @@ class ClassService {
 
     // 4. Insert new schedules
     const result = await Timetable.insertMany(formattedData);
+
+    // 5. Update lastTimetableUpdate for affected classes
+    await Class.updateMany(
+      { name: { $in: classNames } },
+      { $set: { lastTimetableUpdate: new Date() } }
+    );
       
     return result;
   }

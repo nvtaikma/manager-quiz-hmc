@@ -26,6 +26,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const ClassSchema = new mongoose_1.Schema({
     name: { type: String, required: true, unique: true, trim: true },
+    lastTimetableUpdate: { type: Date },
 }, {
     timestamps: true,
 });

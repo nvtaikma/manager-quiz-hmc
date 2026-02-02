@@ -31,9 +31,17 @@ class ClassController {
     try {
       const { className } = req.params;
       const timetable = await ClassService.getTimetableByClass(className);
+      
+      // Get class metadata (lastTimetableUpdate)
+      // Since ClassService doesn't export the Model directly in a clean way via service methods yet, 
+      // we should ideally add a method in Service. But for quick win, let's assume ClassService can do it.
+      // Or import the Model here. Let's ask Service to do it.
+      const classInfo = await ClassService.getClassByName(className);
+
       res.status(200).json({
         message: "Get timetable success",
         data: timetable,
+        meta: classInfo
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
