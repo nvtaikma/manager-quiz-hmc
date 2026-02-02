@@ -1,0 +1,97 @@
+{
+  "meta": {
+    "schema_version": "1.1.0",
+    "awf_version": "3.3.0",
+    "last_updated": "2026-02-02"
+  },
+  "project": {
+    "name": "Manager Quiz HMC",
+    "type": "Web Application",
+    "status": "Active Development"
+  },
+  "tech_stack": {
+    "frontend": {
+      "framework": "Next.js",
+      "styling": "TailwindCSS",
+      "state_management": "React Hooks"
+    },
+    "backend": {
+      "framework": "Express.js",
+      "language": "TypeScript",
+      "database": "MongoDB (Mongoose)"
+    }
+  },
+  "database_schema": {
+    "summary": "System manages Students, Classes, Timetables, Products, Exams, and Orders.",
+    "tables": [
+      {
+        "name": "Class",
+        "description": "Stores class names (unique).",
+        "columns": ["name", "createdAt", "updatedAt"]
+      },
+      {
+        "name": "Timetable",
+        "description": "Stores schedule for classes.",
+        "relationships": "Linked to Class via 'ten_lop' (string reference)",
+        "columns": [
+          "buoi (Morning/Afternoon)",
+          "ngay_hoc (Date)",
+          "giang_duong",
+          "dia_diem",
+          "ten_lop",
+          "mon_hoc",
+          "giang_vien"
+        ]
+      }
+    ]
+  },
+  "api_endpoints": [
+    {
+      "path": "/api/classes",
+      "method": "GET",
+      "explained": "Get list of all classes."
+    },
+    {
+      "path": "/api/classes/bulk",
+      "method": "POST",
+      "explained": "Bulk create classes (skips existing ones)."
+    },
+    {
+      "path": "/api/classes/timetable/import",
+      "method": "POST",
+      "explained": "Import timetable for classes. DELETES old schedule for those classes first."
+    },
+    {
+      "path": "/api/classes/:className/timetable",
+      "method": "GET",
+      "explained": "Get timetable for a specific class."
+    },
+    {
+      "path": "/api/classes/:className/timetable/import",
+      "method": "POST",
+      "explained": "Import timetable strictly for a specific class (Validates context)."
+    }
+  ],
+  "features": [
+    {
+      "name": "Class Management",
+      "description": "Admin can list and bulk add classes.",
+      "status": "Implemented"
+    },
+    {
+      "name": "Timetable Management",
+      "description": "View and Import timetables via JSON.",
+      "status": "Implemented"
+    }
+  ],
+  "knowledge_items": {
+    "patterns": [
+      "Modular architecture in Backend (modules/class, modules/timetable).",
+      "Service-Controller-Route pattern."
+    ],
+    "gotchas": [
+      "MongoDB Transaction requires Replica Set. For standalone, use sequential Delete -> Insert logic.",
+      "Importing Timetable performs a HARD REPLACE (Delete old -> Insert new)."
+    ]
+  }
+}

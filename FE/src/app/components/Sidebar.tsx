@@ -104,6 +104,13 @@ const navItems = [
     title: "Sinh viên",
     description: "Danh sách sinh viên theo trạng thái",
   },
+  {
+    href: "/classes",
+    icon: BookOpen,
+    label: "Classes",
+    title: "Lớp học",
+    description: "Quản lý lớp học và thời khóa biểu",
+  },
 ];
 
 export default function Sidebars({ content }: { content: React.ReactNode }) {

@@ -13,8 +13,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importDefault(require("mongoose"));
-// const uri = "mongodb://localhost:27017/google-auth";
-const uri = "mongodb://hmcuser:hmcuser1a123@157.10.199.146:27017/admin";
+const uri = "mongodb://localhost:27017/google-auth";
+// const uri = "mongodb://hmcuser:hmcuser1a123@157.10.199.146:27017/admin";
 // const uri = "mongodb://nvtaikma:nvtaikma@172.17.0.1:27017/admin";
 function connectDB() {
     return __awaiter(this, void 0, void 0, function* () {

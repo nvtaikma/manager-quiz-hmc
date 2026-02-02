@@ -1,0 +1,108 @@
+≡ƒÜÇ Starting Integration Test...
+
+1∩╕ÅΓâú Testing Bulk Create Classes...
+Status: 200
+Response: {
+  "message": "Bulk create classes success",
+  "data": {
+    "insertedCount": 0,
+    "matchedCount": 9,
+    "modifiedCount": 9,
+    "deletedCount": 0,
+    "upsertedCount": 0,
+    "upsertedIds": {},
+    "insertedIds": {}
+  }
+}
+
+2∩╕ÅΓâú Testing Import Timetable...
+Status: 200
+Response: {
+  "message": "Import timetable success",
+  "data": [
+    {
+      "buoi": "Chiß╗üu",
+      "ngay_hoc": "2026-01-22T17:00:00.000Z",
+      "giang_duong": "PTH Tin 3",
+      "dia_diem": "35 ─Éo├án Thß╗ï ─Éiß╗âm",
+      "doi_tuong": "02. DS15",
+      "ten_lop": "D╞░ß╗úc 15A08",
+      "mon_hoc": "Cß║Ñu tß║ío v├á chß╗⌐c n─âng cß╗ºa c╞í thß╗â",
+      "loai_gio": "Thi hß║┐t m├┤n",
+      "so_tiet": "T",
+      "giang_vien": "",
+      "sdt_gv": "",
+      "noi_dung": "",
+      "gio_thi": "13h30",
+      "ghi_chu": "",
+      "_id": "69802b4a2cc79bd08bb60da5",
+      "__v": 0,
+      "createdAt": "2026-02-02T04:42:50.877Z",
+      "updatedAt": "2026-02-02T04:42:50.877Z"
+    },
+    {
+      "buoi": "Chiß╗üu",
+      "ngay_hoc": "2026-01-23T17:00:00.000Z",
+      "giang_duong": "PTH 05",
+      "dia_diem": "35 ─Éo├án Thß╗ï ─Éiß╗âm",
+      "doi_tuong": "08. YS3",
+      "ten_lop": "Y sß╗╣ ─æa khoa 3A05",
+      "mon_hoc": "Cß║Ñu tß║ío v├á chß╗⌐c n─âng cß╗ºa c╞í thß╗â",
+      "loai_gio": "2.Thß╗▒c h├ánh",
+      "so_tiet": "5",
+      "giang_vien": "V┼⌐ Thß╗ï Ngß╗ìc",
+      "sdt_gv": "836852319",
+      "noi_dung": "B├ái 4: TH cß║Ñu tß║ío GP chi d╞░ß╗¢i",
+      "gio_thi": "",
+      "ghi_chu": "",
+      "_id": "69802b4a2cc79bd08bb60da6",
+      "__v": 0,
+      "createdAt": "2026-02-02T04:42:50.878Z",
+      "updatedAt": "2026-02-02T04:42:50.878Z"
+    },
+    {
+      "buoi": "1. S├íng",
+      "ngay_hoc": "2026-01-25T17:00:00.000Z",
+      "giang_duong": "PTH Tin 1",
+      "dia_diem": "35 ─Éo├án Thß╗ï ─Éiß╗âm",
+      "doi_tuong": "02. DS15",
+      "ten_lop": "D╞░ß╗úc 15A04",
+      "mon_hoc": "Cß║Ñu tß║ío v├á chß╗⌐c n─âng cß╗ºa c╞í thß╗â",
+      "loai_gio": "Thi hß║┐t m├┤n",
+      "so_tiet": "T",
+      "giang_vien": "",
+      "sdt_gv": "",
+      "noi_dung": "",
+      "gio_thi": "8h30",
+      "ghi_chu": "",
+      "_id": "69802b4a2cc79bd08bb60da7",
+      "__v": 0,
+      "createdAt": "2026-02-02T04:42:50.878Z",
+      "updatedAt": "2026-02-02T04:42:50.878Z"
+    }
+  ]
+}
+
+3∩╕ÅΓâú Verifying Timetable for 'D╞░ß╗úc 15A08'...
+Status: 200
+Found 1 entries for D╞░ß╗úc 15A08
+First entry: {
+  _id: '69802b4a2cc79bd08bb60da5',
+  buoi: 'Chiß╗üu',
+  ngay_hoc: '2026-01-22T17:00:00.000Z',
+  giang_duong: 'PTH Tin 3',
+  dia_diem: '35 ─Éo├án Thß╗ï ─Éiß╗âm',
+  doi_tuong: '02. DS15',
+  ten_lop: 'D╞░ß╗úc 15A08',
+  mon_hoc: 'Cß║Ñu tß║ío v├á chß╗⌐c n─âng cß╗ºa c╞í thß╗â',
+  loai_gio: 'Thi hß║┐t m├┤n',
+  so_tiet: 'T',
+  giang_vien: '',
+  sdt_gv: '',
+  noi_dung: '',
+  gio_thi: '13h30',
+  ghi_chu: '',
+  __v: 0,
+  createdAt: '2026-02-02T04:42:50.877Z',
+  updatedAt: '2026-02-02T04:42:50.877Z'
+}

@@ -10,6 +10,7 @@ import examHistoryRouter from "./ExamHistory.route";
 import sessionRouter from "./Session.route";
 import userRouter from "./User.route";
 import practiceExamHistoryRouter from "./PracticeExamHistory.route";
+import classRouter from "../modules/class/class.route";
 
 const router = express.Router();
 
@@ -24,5 +25,6 @@ router.use("/exam-histories", examHistoryRouter);
 router.use("/sessions", sessionRouter);
 router.use("/users", userRouter);
 router.use("/PracticeExamHistory", practiceExamHistoryRouter);
+router.use("/classes", classRouter);
 
 export default router;

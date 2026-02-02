@@ -1,0 +1,27 @@
+≡ƒÜÇ Starting Integration Test...
+
+1∩╕ÅΓâú Testing Bulk Create Classes...
+Status: 200
+Response: {
+  "message": "Bulk create classes success",
+  "data": {
+    "insertedCount": 0,
+    "matchedCount": 9,
+    "modifiedCount": 9,
+    "deletedCount": 0,
+    "upsertedCount": 0,
+    "upsertedIds": {},
+    "insertedIds": {}
+  }
+}
+
+2∩╕ÅΓâú Testing Import Timetable...
+Status: 500
+Response: {
+  "message": "Transaction numbers are only allowed on a replica set member or mongos"
+}
+Γ¥î Failed: Error: Failed to import timetable
+    at C:\Users\Admin\Desktop\manager\EDIT_1_8\BE\src\scripts\test_class_integration.ts:122:35
+    at Generator.next (<anonymous>)
+    at fulfilled (C:\Users\Admin\Desktop\manager\EDIT_1_8\BE\src\scripts\test_class_integration.ts:6:58)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)

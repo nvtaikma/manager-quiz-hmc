@@ -30,6 +30,9 @@ export const API_ENDPOINTS = {
 
   // Announcements
   ANNOUNCEMENTS: "/api/announcements",
+
+  // Classes
+  CLASSES: "/classes",
 } as const;
 
 // Helper function để tạo full URL
