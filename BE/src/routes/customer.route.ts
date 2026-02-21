@@ -21,6 +21,11 @@ router.get(
   asyncHandler(CustomerController.getCountCustomerInactive)
 );
 
+router.get(
+  "/count/online",
+  asyncHandler(CustomerController.getCountCustomerOnline)
+);
+
 router.get("/:id/session", asyncHandler(CustomerController.getCustomerSession));
 
 router.get("/search", asyncHandler(CustomerController.searchCustomer));

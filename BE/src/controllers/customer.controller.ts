@@ -59,6 +59,14 @@ class CustomerController {
     });
   }
 
+  async getCountCustomerOnline(req: Request, res: Response) {
+    const count = await CustomersService.getCountCustomerOnline();
+    return res.json({
+      message: "Count customer online fetched successfully",
+      data: { count },
+    });
+  }
+
   async searchCustomer(req: Request, res: Response) {
     const { keyword } = req.query as { keyword: string };
     const { page } = req.query as unknown as { page: number };

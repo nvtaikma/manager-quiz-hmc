@@ -25,6 +25,7 @@ import {
 interface DashboardData {
   activeUsers: number;
   inactiveUsers: number;
+  onlineUsers: number;
   totalOrders: number;
   completedOrders: number;
   pendingOrders: number;
@@ -54,6 +55,7 @@ export default function Dashboard() {
       const endpoints = [
         "customers/count/active",
         "customers/count/inactive",
+        "customers/count/online",
         "orders/count",
         "orders/count/status?status=completed",
         "orders/count/status?status=pending",
@@ -79,6 +81,7 @@ export default function Dashboard() {
       const [
         activeUsers,
         inactiveUsers,
+        onlineUsers,
         totalOrders,
         completedOrders,
         pendingOrders,
@@ -107,6 +110,7 @@ export default function Dashboard() {
       setData({
         activeUsers: activeUsers.data.count,
         inactiveUsers: inactiveUsers.data.count,
+        onlineUsers: onlineUsers.data.count,
         totalOrders: totalOrders.data.count,
         completedOrders: completedOrders.data.count,
         pendingOrders: pendingOrders.data.count,
@@ -337,6 +341,16 @@ export default function Dashboard() {
                 <span>Đang hoạt động:</span>
                 <span className="font-medium text-blue-600">
                   {data.activeUsers}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Đang Online:</span>
+                <span className="font-medium text-green-600 flex items-center">
+                  <span className="relative flex h-3 w-3 mr-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                  </span>
+                  {data.onlineUsers}
                 </span>
               </div>
               <div className="flex items-center justify-between">

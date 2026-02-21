@@ -77,6 +77,15 @@ class CustomerController {
             });
         });
     }
+    getCountCustomerOnline(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const count = yield customers_service_1.default.getCountCustomerOnline();
+            return res.json({
+                message: "Count customer online fetched successfully",
+                data: { count },
+            });
+        });
+    }
     searchCustomer(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             const { keyword } = req.query;

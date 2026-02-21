@@ -110,6 +110,18 @@ class CustomersService {
             return yield customers_1.default.countDocuments({ status: "inactive" });
         });
     }
+    getCountCustomerOnline() {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const keys = yield redis_1.default.keys("online:user:*");
+                return keys.length;
+            }
+            catch (error) {
+                console.error("Error fetching online users from Redis:", error);
+                return 0; // Trả về 0 nếu có lỗi Redis
+            }
+        });
+    }
     getCustomerSession(customerId) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;

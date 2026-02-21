@@ -98,6 +98,16 @@ class CustomersService {
     return await Customer.countDocuments({ status: "inactive" });
   }
 
+  async getCountCustomerOnline() {
+    try {
+      const keys = await redis.keys("online:user:*");
+      return keys.length;
+    } catch (error) {
+      console.error("Error fetching online users from Redis:", error);
+      return 0; // Trả về 0 nếu có lỗi Redis
+    }
+  }
+
   async getCustomerSession(customerId: string) {
     if (!customerId) return null;
     
