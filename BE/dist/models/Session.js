@@ -66,10 +66,19 @@ const sessionSchema = new mongoose_1.Schema({
         required: true,
         index: true,
     },
+    logoutAt: {
+        type: Date,
+        default: null,
+    },
+    logoutReason: {
+        type: String,
+        enum: ["manual", "kicked", "expired", "password_reset", null],
+        default: null,
+    },
 }, {
     timestamps: true,
 });
-// Đánh chỉ mục phức hợp để truy vấn nhanh hơn
-sessionSchema.index({ userId: 1, clientId: 1 });
+// Indexes cho query hiệu quả
 sessionSchema.index({ userId: 1, isActive: 1 });
+sessionSchema.index({ userId: 1, createdAt: -1 }); // Lịch sử đăng nhập (mới nhất trước)
 exports.default = mongoose_1.default.model("Session", sessionSchema);
