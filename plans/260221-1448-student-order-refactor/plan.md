@@ -1,6 +1,6 @@
 # Plan: Student Order Refactor & Expire Scanner
 Created: 2026-02-21T14:48:00+07:00
-Status: 🟡 In Progress
+Status: ✅ Complete
 
 ## Overview
 Cải tiến mô hình quản lý sinh viên - đơn hàng để tránh việc hủy đơn hàng làm mất toàn bộ lịch sử học tập của sinh viên. Đồng thời tích hợp tính năng quét và xử lý sinh viên quá hạn 3 tháng.
@@ -18,10 +18,9 @@ Cải tiến mô hình quản lý sinh viên - đơn hàng để tránh việc h
 
 | Phase | Name | Status | Progress |
 |-------|------|--------|----------|
-| 01 | Cập nhật Model & Logic Thêm/Hủy Student gắn với OrderId | ⬜ Pending | 0% |
-| 02 | Nút Quét & Cập nhật UI Quản lý | ⬜ Pending | 0% |
+| 01 | Cập nhật Model & Logic Thêm/Hủy Student gắn với OrderId | ✅ Complete | 100% |
+| 02 | Nút Quét & Cập nhật UI Quản lý | ✅ Complete | 100% |
 
 ## Quick Commands
-- Start Phase 1: `/code plans/260221-1448-student-order-refactor/phase-01-model.md`
-- Check progress: `/next`
+- Chạy hệ thống.
 - Save context: `/save-brain`

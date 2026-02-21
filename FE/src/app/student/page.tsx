@@ -123,32 +123,71 @@ function StudentContent(): ReactNode {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as StudentStatus)}>
-        <TabsList className="grid w-full max-w-md grid-cols-3">
-          {(Object.entries(tabConfig) as [StudentStatus, { label: string; value: StudentStatus }][]).map(
-            ([key, config]) => (
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => handleTabChange(v as StudentStatus)}
+        className="w-full"
+      >
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <TabsList className="grid w-full max-w-[400px] grid-cols-3">
+            {(
+              Object.entries(tabConfig) as [
+                StudentStatus,
+                { label: string; value: StudentStatus }
+              ][]
+            ).map(([key, config]) => (
               <TabsTrigger key={key} value={config.value}>
                 {config.label}
               </TabsTrigger>
-            )
-          )}
-        </TabsList>
+            ))}
+          </TabsList>
 
-        {(Object.entries(tabConfig) as [StudentStatus, { label: string; value: StudentStatus }][]).map(
-          ([key, config]) => (
-            <TabsContent key={key} value={config.value} className="space-y-4">
-              <StudentTable students={students} isLoading={loading} />
+        <button
+          onClick={async () => {
+            if (!confirm("Bạn có chắc muốn quét tất cả học viên đã sử dụng khóa học quá 90 ngày và chuyển sang trạng thái Hết Hạn không?")) return;
+            try {
+               setLoading(true);
+               const res = await fetch(`${API_BASE_URL}/students/exprire`, { method: "PATCH" });
+               const data = await res.json();
+               if(res.ok) {
+                  alert(`✅ Quét thành công! Đã chuyển ${data.data.modifiedCount} học viên sang hết hạn.`);
+                  fetchStudents(activeTab, currentPage);
+               } else {
+                  alert("❌ Có lỗi xảy ra: " + data.message);
+               }
+            } catch(e) {
+               alert("❌ Có lỗi xảy ra khi kết nối server");
+            } finally {
+               setLoading(false);
+            }
+          }}
+          disabled={loading}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium flex-shrink-0 disabled:opacity-50"
+        >
+          {loading ? "Đang xử lý..." : "🔍 Quét học viên hết hạn (>90 ngày)"}
+        </button>
+      </div>
 
-              {!loading && students.length > 0 && (
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
-                />
-              )}
-            </TabsContent>
-          )
-        )}
+      <div className="mt-6">
+        {(
+          Object.entries(tabConfig) as [
+            StudentStatus,
+            { label: string; value: StudentStatus }
+          ][]
+        ).map(([key, config]) => (
+          <TabsContent key={key} value={config.value} className="space-y-4">
+            <StudentTable students={students} isLoading={loading} />
+
+            {!loading && students.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            )}
+          </TabsContent>
+        ))}
+      </div>
       </Tabs>
     </div>
   );

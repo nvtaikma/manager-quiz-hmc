@@ -295,6 +295,7 @@ class OrderService {
         StudentService.createStudent({
           email: foundCustomer.email,
           productId: item.productId,
+          orderId: newOrder._id.toString()
         }),
       );
 
@@ -360,7 +361,19 @@ class OrderService {
   }
 
   async updateStatusOrder(id: string, status: string) {
-    return await Order.findByIdAndUpdate(id, { status }, { new: true });
+    const orderUpdated = await Order.findByIdAndUpdate(id, { status }, { new: true });
+    
+    // Nếu đơn bị huỷ thì xoá record học sinh đăng kí theo orderId đó
+    if (status === "cancelled") {
+      try {
+        await StudentService.deleteStudentsByOrderId(id);
+        console.log(`Đã hủy vé học tập cho đơn hàng ${id}`);
+      } catch (e) {
+        console.error("Lỗi khi hủy sinh viên theo mã Order: ", e);
+      }
+    }
+    
+    return orderUpdated;
   }
 
   async getCountOrder() {

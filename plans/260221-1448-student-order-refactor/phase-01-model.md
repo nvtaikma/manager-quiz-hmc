@@ -1,5 +1,5 @@
 # Phase 01: Refactor Model Student & Order Logic
-Status: ⬜ Pending
+Status: ✅ Complete
 Dependencies: None
 
 ## Objective
@@ -7,10 +7,10 @@ Sửa cấu trúc Mongoose Schema của `Student` để gắn thêm thuộc tín
 
 ## Requirements
 ### Functional
-- [ ] Mở rộng bảng `Student` (thêm `orderId?: string` optional để hỗ trợ thêm bằng tay).
-- [ ] Trong `BE/src/service/order.service.ts`, lúc làm `createOrder`, gọi hàm thêm `Student` bằng cách truyền cả `orderId: newOrder._id`. 
-- [ ] Đổi logic lúc hàm sinh viên `createStudent` ở `student.service`: Nếu thêm bằng tay (ko có orderId), bỏ qua insert đè luôn. Nếu có `orderId`, coi như là vé học mới, tạo record `Student` DỰA TRÊN `orderId` mới nhất. Hoặc đơn giản là luôn Create (Cho phép Duplicate). Tốt nhất là THÊM MỚI nếu có order id để giữ lại Record báo "Expired".
-- [ ] Trong logic Update hoặc Delete Order `cancelOrder`/`updateStatusOrder`: Cần tìm ra đúng `Student` mang cái `orderId` bị báo hủy đó và set status là `cancelled` hoặc `expired` Tùy nghiệp vụ (xóa record đó đi hoặc set expired). Vì theo database cũ nó đang tìm bằng Email và Khóa để Update.
+- [x] Mở rộng bảng `Student` (thêm `orderId?: string` optional để hỗ trợ thêm bằng tay).
+- [x] Trong `BE/src/service/order.service.ts`, lúc làm `createOrder`, gọi hàm thêm `Student` bằng cách truyền cả `orderId: newOrder._id`. 
+- [x] Đổi logic lúc hàm sinh viên `createStudent` ở `student.service`: Nếu thêm bằng tay (ko có orderId), bỏ qua insert đè luôn. Nếu có `orderId`, coi như là vé học mới, tạo record `Student` DỰA TRÊN `orderId` mới nhất. Hoặc đơn giản là luôn Create (Cho phép Duplicate). Tốt nhất là THÊM MỚI nếu có order id để giữ lại Record báo "Expired".
+- [x] Trong logic Update hoặc Delete Order `cancelOrder`/`updateStatusOrder`: Cần tìm ra đúng `Student` mang cái `orderId` bị báo hủy đó và set status là `cancelled` hoặc `expired` Tùy nghiệp vụ (xóa record đó đi hoặc set expired). Vì theo database cũ nó đang tìm bằng Email và Khóa để Update.
 
 ## Implementation Steps
 ### 1. `BE/src/models/student.ts`

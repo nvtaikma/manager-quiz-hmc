@@ -1,0 +1,25 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const asynHandler_1 = __importDefault(require("../util/asynHandler"));
+const order_controller_1 = __importDefault(require("../controllers/order.controller"));
+const router = express_1.default.Router();
+router.post("/", (0, asynHandler_1.default)(order_controller_1.default.createOrder));
+router.patch("/:id", (0, asynHandler_1.default)(order_controller_1.default.updateOrder));
+router.patch("/:id/status", (0, asynHandler_1.default)(order_controller_1.default.updateStatusOrder));
+router.get("/list", (0, asynHandler_1.default)(order_controller_1.default.getListOrders));
+router.get("/id/:id", (0, asynHandler_1.default)(order_controller_1.default.getOrder));
+// router.get("/user", asyncHandler(OrderController.getListOrderByUser));
+router.get("/count", (0, asynHandler_1.default)(order_controller_1.default.getCountOrder));
+router.get("/count/status", (0, asynHandler_1.default)(order_controller_1.default.getCountOrderByStatus));
+router.get("/total/amount", (0, asynHandler_1.default)(order_controller_1.default.getTotalAmountOrderByStatusSuccess));
+router.get("/total/amount/date", (0, asynHandler_1.default)(order_controller_1.default.getTotalAmountOrderByDate));
+router.get("/total/amount/last7days", (0, asynHandler_1.default)(order_controller_1.default.getTotalAmountLast7Days));
+router.get("/total/amount/last12months", (0, asynHandler_1.default)(order_controller_1.default.getTotalAmountLast12Months));
+router.get("/total/amount/yesterday", (0, asynHandler_1.default)(order_controller_1.default.getTotalAmountYesterday));
+router.get("/email", (0, asynHandler_1.default)(order_controller_1.default.getOrderByEmail));
+// router.get("/product", asyncHandler(OrderController.getListOrderByProduct));
+exports.default = router;

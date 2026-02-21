@@ -4,32 +4,43 @@ class StudentsService {
   async createStudent({
     email,
     productId,
+    orderId, // new parameter
   }: {
     email: string;
     productId: string;
+    orderId?: string;
   }) {
     const normalizedEmail = email.toLowerCase();
 
     try {
-      const student = await Student.findOneAndUpdate(
-        { email: normalizedEmail, productId },
-        { email: normalizedEmail, productId },
-        { new: true, upsert: true }
-      ).lean();
-      console.log("student", student);
+      if (orderId) {
+        // Trường hợp thêm qua Đơn hàng: Luôn tạo một Record Mới (Ticket mới) để lưu vết lịch sử
+        // kể cả khi đã có vé cũ hết hạn
+        const student = await Student.create({
+           email: normalizedEmail,
+           productId,
+           orderId,
+           status: "pending"
+        });
+        return { student };
+      } else {
+        // Trường hợp Thêm thủ công bằng tay (không có orderId): Upsert
+        const student = await Student.findOneAndUpdate(
+          { email: normalizedEmail, productId, orderId: { $exists: false } }, // Chỉ update lên các thẻ thêm tay
+          { email: normalizedEmail, productId },
+          { new: true, upsert: true }
+        ).lean();
 
-      if (
-        student &&
-        student.createdAt.getTime() !== student.updatedAt.getTime()
-      ) {
-        return {
-          message: "User already in the class",
-        };
+        if (
+          student &&
+          student.createdAt.getTime() !== student.updatedAt.getTime()
+        ) {
+          return {
+            message: "User already in the class",
+          };
+        }
+        return { student };
       }
-
-      return {
-        student,
-      };
     } catch (error) {
       console.error("Error creating/finding student:", error);
       throw error;
@@ -181,7 +192,11 @@ class StudentsService {
   }
 
   async deleteStudentByProductIdAndEmail(productId: string, email: string) {
-    return await Student.findOneAndDelete({ productId, email });
+    return await Student.findOneAndDelete({ productId, email, orderId: { $exists: false } }); // Chặn xóa những tk có OrderID dùng nhầm
+  }
+
+  async deleteStudentsByOrderId(orderId: string) {
+    return await Student.deleteMany({ orderId });
   }
 
   async searchStudentByProductId(

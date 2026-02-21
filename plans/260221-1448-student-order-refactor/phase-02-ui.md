@@ -1,5 +1,5 @@
 # Phase 02: Scanner Button & UI (Frontend)
-Status: ⬜ Pending
+Status: ✅ Complete
 Dependencies: Phase 01: phase-01-model.md
 
 ## Objective
@@ -7,18 +7,17 @@ Tích hợp một nút nhấn "Quét quá hạn" tại trang Dashboard danh sác
 
 ## Requirements
 ### Functional
-- [ ] Thêm nút button vào FE trang `student/page.tsx` cho phép gọi API `/api/students/exprire`.
-- [ ] Xử lý Loading state cho nút bấm để báo User đang update.
-- [ ] Re-fetch lại danh sách học viên hiện tại (trả về Tab trước đó) sau khi quét thành công và báo Toast.
+- [x] Thêm nút button vào FE trang `student/page.tsx` cho phép gọi API `/api/students/exprire`.
+- [x] Xử lý Loading state cho nút bấm để báo User đang update.
+- [x] Re-fetch lại danh sách học viên hiện tại (trả về Tab trước đó) sau khi quét thành công và báo Toast.
 
 ## Implementation Steps
-1. [ ] Gọi API `PATCH ${API_BASE_URL}/students/exprire` từ button mới.
-2. [ ] Thêm Button "Quét Hết Hạn" vào cạnh góc trên phải page `/student`.
-3. [ ] Bắn `toast()` thông báo số lượng bản ghi đã được cập nhật thành công (dựa theo schema Backend trả về: `modifiedCount`).
+1. [x] Gọi API `PATCH ${API_BASE_URL}/students/exprire` từ button mới.
+2. [x] Thêm Button "Quét Hết Hạn" vào cạnh góc trên phải page `/student`.
+3. [x] Bắn `alert()` thông báo số lượng bản ghi đã được cập nhật thành công (dựa theo schema Backend trả về: `modifiedCount`).
 
 ## Files to Modify/Check
 - `FE/src/app/student/page.tsx`
-- Cài đặt `lucide-react` cho Icon, `useToast` để toast.
 
 ---
 Next Phase: null
