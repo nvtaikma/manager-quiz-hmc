@@ -5,14 +5,30 @@ class StudentsService {
     email,
     productId,
     orderId, // new parameter
+    status = "pending",
   }: {
     email: string;
     productId: string;
     orderId?: string;
+    status?: string;
   }) {
     const normalizedEmail = email.toLowerCase();
 
     try {
+      // 1. Kiểm tra xem sinh viên đã có trong môn học và có trạng thái completed/pending chưa
+      const existingCompletedStudent = await Student.findOne({
+        email: normalizedEmail,
+        productId,
+        status: { $in: ["completed", "pending"] }
+      }).lean();
+
+      // Nếu đã có và đang completed hoặc pending thì chặn ngay, trả về message lỗi
+      if (existingCompletedStudent) {
+        return {
+          message: "User already in the class"
+        };
+      }
+
       if (orderId) {
         // Trường hợp thêm qua Đơn hàng: Luôn tạo một Record Mới (Ticket mới) để lưu vết lịch sử
         // kể cả khi đã có vé cũ hết hạn
@@ -20,14 +36,18 @@ class StudentsService {
            email: normalizedEmail,
            productId,
            orderId,
-           status: "pending"
+           status: status
         });
         return { student };
       } else {
         // Trường hợp Thêm thủ công bằng tay (không có orderId): Upsert
         const student = await Student.findOneAndUpdate(
           { email: normalizedEmail, productId, orderId: { $exists: false } }, // Chỉ update lên các thẻ thêm tay
-          { email: normalizedEmail, productId },
+          { 
+            email: normalizedEmail, 
+            productId,
+            status: "completed" // Luôn lưu thành completed khi add thủ công
+          },
           { new: true, upsert: true }
         ).lean();
 
@@ -35,9 +55,8 @@ class StudentsService {
           student &&
           student.createdAt.getTime() !== student.updatedAt.getTime()
         ) {
-          return {
-            message: "User already in the class",
-          };
+          // Trả về false nếu cập nhật record đang có mà ko tao record moi, nhung de no bao success
+          return { student };
         }
         return { student };
       }
@@ -197,6 +216,10 @@ class StudentsService {
 
   async deleteStudentsByOrderId(orderId: string) {
     return await Student.deleteMany({ orderId });
+  }
+
+  async updateStudentStatusByOrderId(orderId: string, status: string) {
+    return await Student.updateMany({ orderId }, { status });
   }
 
   async searchStudentByProductId(

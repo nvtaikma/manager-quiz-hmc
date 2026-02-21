@@ -16,6 +16,7 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const customers_1 = __importDefault(require("../models/customers"));
 const order_1 = __importDefault(require("../models/order"));
 const products_1 = __importDefault(require("../models/products"));
+const student_1 = __importDefault(require("../models/student"));
 const student_service_1 = __importDefault(require("./student.service"));
 class OrderService {
     getOrder(id) {
@@ -256,6 +257,16 @@ class OrderService {
             if (foundListProductId.length !== items.length) {
                 throw new Error("Some products not found");
             }
+            // --- LOGIC MỚI: KIỂM TRA SINH VIÊN ĐÃ SỞ HỮU MÔN HỌC (COMPLETED HOẶC PENDING) CHƯA ---
+            const existingCompletedStudents = yield student_1.default.find({
+                email: foundCustomer.email.toLowerCase(),
+                productId: { $in: items.map(item => item.productId) },
+                status: { $in: ["completed", "pending"] }
+            }).lean();
+            if (existingCompletedStudents.length > 0) {
+                throw new Error("Sinh viên này đã sở hữu hoặc đang chờ duyệt khóa học trong đơn. Vui lòng kiểm tra lại để tránh trùng lặp đơn hàng.");
+            }
+            // -------------------------------------------------------------------------
             const newOrder = yield order_1.default.create({
                 customerId,
                 items: items.map((item) => ({
@@ -321,7 +332,27 @@ class OrderService {
     }
     updateStatusOrder(id, status) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (status === "completed" || status === "pending") {
+                const orderToUpdate = yield order_1.default.findById(id).lean();
+                if (!orderToUpdate)
+                    throw new Error("Không tìm thấy đơn hàng");
+                const foundCustomer = yield customers_1.default.findById(orderToUpdate.customerId).lean();
+                if (foundCustomer) {
+                    // Kiểm tra xem sinh viên đã có vé học (do thêm bằng tay hoặc đơn khác) chưa
+                    const existingCompletedStudents = yield student_1.default.find({
+                        email: foundCustomer.email.toLowerCase(),
+                        productId: { $in: orderToUpdate.items.map(item => item.productId) },
+                        status: { $in: ["completed", "pending"] },
+                        orderId: { $ne: id } // Bỏ qua vé do chính đơn này tạo ra (nếu vé mang orderId hiện tại vẫn còn sống)
+                    }).lean();
+                    if (existingCompletedStudents.length > 0) {
+                        throw new Error("Khôi phục đơn thất bại: Khách hàng đã được cấp một hoặc nhiều khóa học trong đơn này (thêm bằng tay hoặc từ đơn khác).");
+                    }
+                }
+            }
             const orderUpdated = yield order_1.default.findByIdAndUpdate(id, { status }, { new: true });
+            if (!orderUpdated)
+                return null;
             // Nếu đơn bị huỷ thì xoá record học sinh đăng kí theo orderId đó
             if (status === "cancelled") {
                 try {
@@ -330,6 +361,36 @@ class OrderService {
                 }
                 catch (e) {
                     console.error("Lỗi khi hủy sinh viên theo mã Order: ", e);
+                }
+            }
+            else if (status === "completed" || status === "pending") {
+                try {
+                    // Đồng bộ trạng thái của đơn hàng sang Student
+                    const updateResult = yield student_service_1.default.updateStudentStatusByOrderId(id, status);
+                    // Nếu không có record nào được cập nhật, tức là đơn đã từng bị 'cancelled' và xoá mất sinh viên
+                    // Ta cần phục hồi lại các thẻ Học viên này
+                    if (updateResult.matchedCount === 0) {
+                        const foundCustomer = yield customers_1.default.findById(orderUpdated.customerId).lean();
+                        if (foundCustomer) {
+                            // Tái tạo lại student record cho các item
+                            const studentCreationPromises = orderUpdated.items.map((item) => __awaiter(this, void 0, void 0, function* () {
+                                return student_service_1.default.createStudent({
+                                    email: foundCustomer.email,
+                                    productId: item.productId.toString(),
+                                    orderId: id,
+                                    status: status // Giữ đúng trạng thái mới của đơn
+                                });
+                            }));
+                            yield Promise.all(studentCreationPromises);
+                            console.log(`Đã tái tạo vé học tập thành ${status} cho đơn hàng ${id} (phục hồi sau huỷ)`);
+                        }
+                    }
+                    else {
+                        console.log(`Đã cập nhật vé học tập thành ${status} cho đơn hàng ${id}`);
+                    }
+                }
+                catch (e) {
+                    console.error("Lỗi khi cập nhật sinh viên theo mã Order: ", e);
                 }
             }
             return orderUpdated;

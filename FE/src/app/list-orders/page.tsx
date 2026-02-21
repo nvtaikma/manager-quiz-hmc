@@ -187,100 +187,21 @@ function OrdersContent(): ReactNode {
     deleteStudent: boolean
   ) => {
     try {
-      // lấy thông tin đơn hàng từ api
-      const orderResponse = await fetch(`${API_BASE_URL}/orders/id/${orderId}`);
-      if (!orderResponse.ok)
-        throw new Error("Không thể tải thông tin đơn hàng");
-      const orderData = await orderResponse.json();
-      const order = orderData.data[0];
-      console.log(order);
-      const EmailCustomer = order.customer.email;
-      const product = order.products;
-
-      // Nếu status là cancelled và người dùng chọn xóa học sinh
-      if (newStatus === "cancelled" && deleteStudent) {
-        product.forEach(async (product: Product) => {
-          const deleteStudentResponse = await fetch(
-            `${API_BASE_URL}/students/delete/${product._id}/${EmailCustomer}`,
-            {
-              method: "DELETE",
-            }
-          );
-          if (!deleteStudentResponse.ok)
-            throw new Error("Không thể xóa học sinh khỏi sản phẩm");
-        });
-      }
-
-      // SỬA ĐỔI PHẦN XỬ LÝ newStatus === "completed" HOẶC "pending"
-      else if (newStatus === "completed" || newStatus === "pending") {
-        // Xác định trạng thái student cần cập nhật/thêm mới
-        const studentStatus =
-          newStatus === "completed" ? "completed" : "pending";
-
-        // Sử dụng Promise.all để xử lý song song nhiều sản phẩm
-        const studentPromises = product.map(async (product: Product) => {
-          // 1. Kiểm tra sự tồn tại của sinh viên
-          const checkUrl = `${API_BASE_URL}/students/check/${product._id}/${EmailCustomer}`;
-          const checkStudentResponse = await fetch(checkUrl);
-          const checkStudentData = await checkStudentResponse.json();
-
-          // 2. Nếu sinh viên đã tồn tại (checkStudentData.data có dữ liệu)
-          if (checkStudentData.data) {
-            // Lấy ID của Student record (giả sử API check trả về ID hoặc đối tượng student)
-            const studentId = checkStudentData.data._id;
-
-            // THỰC HIỆN CẬP NHẬT TRẠNG THÁI SANG studentStatus
-            const updateStudentResponse = await fetch(
-              `${API_BASE_URL}/students/${studentId}/status`,
-              {
-                method: "PATCH", // Hoặc PUT, tùy thuộc vào API endpoint của bạn
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: studentStatus }),
-              }
-            );
-
-            if (!updateStudentResponse.ok) {
-              throw new Error(
-                `[Student] Cập nhật học sinh thất bại cho sản phẩm ${product._id}`
-              );
-            }
-          }
-          // 3. Nếu sinh viên CHƯA tồn tại (checkStudentData.data là null/false)
-          else {
-            // THỰC HIỆN THÊM MỚI
-            const addStudentResponse = await fetch(
-              `${API_BASE_URL}/students/`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  email: EmailCustomer,
-                  productId: product._id,
-                  status: studentStatus, // Thêm với status là 'pending'
-                }),
-              }
-            );
-            if (!addStudentResponse.ok) {
-              throw new Error(
-                `[Student] Thêm học sinh thất bại cho sản phẩm ${product._id}`
-              );
-            }
-          }
-        });
-
-        await Promise.all(studentPromises);
-      }
-      // cập nhật trạng thái đơn hàng
+      // Vì logic Backend tự động xử lý Thêm/Xóa/Sửa trạng thái Sinh viên từ order.service
+      // (Bao hàm cả deleteStudent mặc định thông qua cancel order)
+      // client chỉ việc cập nhật trạng thái Order:
       const response = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
 
-      if (!response.ok)
-        throw new Error("Không thể cập nhật trạng thái đơn hàng");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Không thể cập nhật trạng thái đơn hàng");
+      }
 
-      // Cập nhật state một cách tối ưu
+      // Cập nhật state UI một cách tối ưu
       setOrders((prevOrders) =>
         prevOrders.map((order) =>
           order._id === orderId ? { ...order, status: newStatus } : order
@@ -290,9 +211,9 @@ function OrdersContent(): ReactNode {
       setSelectedOrder((prev) =>
         prev?._id === orderId ? { ...prev, status: newStatus } : prev
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Lỗi khi cập nhật trạng thái đơn hàng:", error);
-      setError("Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại.");
+      alert(error.message || "Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại.");
     }
   };
 

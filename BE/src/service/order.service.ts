@@ -278,6 +278,18 @@ class OrderService {
       throw new Error("Some products not found");
     }
 
+    // --- LOGIC MỚI: KIỂM TRA SINH VIÊN ĐÃ SỞ HỮU MÔN HỌC (COMPLETED HOẶC PENDING) CHƯA ---
+    const existingCompletedStudents = await Student.find({
+      email: foundCustomer.email.toLowerCase(),
+      productId: { $in: items.map(item => item.productId) },
+      status: { $in: ["completed", "pending"] }
+    }).lean();
+
+    if (existingCompletedStudents.length > 0) {
+      throw new Error("Sinh viên này đã sở hữu hoặc đang chờ duyệt khóa học trong đơn. Vui lòng kiểm tra lại để tránh trùng lặp đơn hàng.");
+    }
+    // -------------------------------------------------------------------------
+
     const newOrder = await Order.create({
       customerId,
       items: items.map((item) => ({
@@ -361,7 +373,28 @@ class OrderService {
   }
 
   async updateStatusOrder(id: string, status: string) {
+    if (status === "completed" || status === "pending") {
+       const orderToUpdate = await Order.findById(id).lean();
+       if (!orderToUpdate) throw new Error("Không tìm thấy đơn hàng");
+       
+       const foundCustomer = await Customer.findById(orderToUpdate.customerId).lean();
+       if (foundCustomer) {
+         // Kiểm tra xem sinh viên đã có vé học (do thêm bằng tay hoặc đơn khác) chưa
+         const existingCompletedStudents = await Student.find({
+           email: foundCustomer.email.toLowerCase(),
+           productId: { $in: orderToUpdate.items.map(item => item.productId) },
+           status: { $in: ["completed", "pending"] },
+           orderId: { $ne: id as any } // Bỏ qua vé do chính đơn này tạo ra (nếu vé mang orderId hiện tại vẫn còn sống)
+         }).lean();
+
+         if (existingCompletedStudents.length > 0) {
+           throw new Error("Khôi phục đơn thất bại: Khách hàng đã được cấp một hoặc nhiều khóa học trong đơn này (thêm bằng tay hoặc từ đơn khác).");
+         }
+       }
+    }
+
     const orderUpdated = await Order.findByIdAndUpdate(id, { status }, { new: true });
+    if (!orderUpdated) return null;
     
     // Nếu đơn bị huỷ thì xoá record học sinh đăng kí theo orderId đó
     if (status === "cancelled") {
@@ -370,6 +403,34 @@ class OrderService {
         console.log(`Đã hủy vé học tập cho đơn hàng ${id}`);
       } catch (e) {
         console.error("Lỗi khi hủy sinh viên theo mã Order: ", e);
+      }
+    } else if (status === "completed" || status === "pending") {
+      try {
+        // Đồng bộ trạng thái của đơn hàng sang Student
+        const updateResult = await StudentService.updateStudentStatusByOrderId(id, status);
+        
+        // Nếu không có record nào được cập nhật, tức là đơn đã từng bị 'cancelled' và xoá mất sinh viên
+        // Ta cần phục hồi lại các thẻ Học viên này
+        if (updateResult.matchedCount === 0) {
+           const foundCustomer = await Customer.findById(orderUpdated.customerId).lean();
+           if (foundCustomer) {
+             // Tái tạo lại student record cho các item
+             const studentCreationPromises = orderUpdated.items.map(async (item) =>
+               StudentService.createStudent({
+                 email: foundCustomer.email,
+                 productId: item.productId.toString(),
+                 orderId: id,
+                 status: status // Giữ đúng trạng thái mới của đơn
+               })
+             );
+             await Promise.all(studentCreationPromises);
+             console.log(`Đã tái tạo vé học tập thành ${status} cho đơn hàng ${id} (phục hồi sau huỷ)`);
+           }
+        } else {
+           console.log(`Đã cập nhật vé học tập thành ${status} cho đơn hàng ${id}`);
+        }
+      } catch (e) {
+        console.error("Lỗi khi cập nhật sinh viên theo mã Order: ", e);
       }
     }
     
