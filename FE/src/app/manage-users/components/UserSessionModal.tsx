@@ -109,9 +109,9 @@ export default function UserSessionModal({ isOpen, onClose, userId, userName, ex
             <div className="p-4 text-center text-muted-foreground">
                 {error}
             </div>
-        ) : !userSession || userSession.sessionHistory.length === 0 ? (
+        ) : !userSession ? (
             <div className="p-6 text-center text-muted-foreground bg-gray-50 rounded-lg">
-                Người dùng này chưa có phiên đăng nhập nào.
+                Người dùng này chưa có dữ liệu.
             </div>
         ) : (
             <div className="space-y-4">
@@ -125,46 +125,52 @@ export default function UserSessionModal({ isOpen, onClose, userId, userName, ex
 
                  <h4 className="text-sm font-semibold text-muted-foreground mt-4 mb-2 uppercase">Lịch sử đăng nhập</h4>
 
-                 <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                    {userSession.sessionHistory.map((s) => (
-                      <div key={s._id} className="flex flex-col space-y-2 p-3 border rounded-lg">
-                          <div className="flex items-start space-x-3">
-                              <div className="p-2 bg-gray-100 rounded-full border">
-                                  {getDeviceIcon(s)}
-                              </div>
-                              <div className="flex-1 space-y-1">
-                                  <div className="flex items-center justify-between">
-                                     <p className="font-medium text-sm">{s.deviceInfo.browser} trên {s.deviceInfo.os}</p>
-                                     {s.isActive && <Badge variant="outline" className="text-xs">Đang gắn token</Badge>}
+                 {userSession.sessionHistory.length === 0 ? (
+                     <div className="p-4 text-center text-muted-foreground border rounded-lg">
+                         Không có lịch sử đăng nhập nào.
+                     </div>
+                 ) : (
+                     <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                        {userSession.sessionHistory.map((s) => (
+                          <div key={s._id} className="flex flex-col space-y-2 p-3 border rounded-lg">
+                              <div className="flex items-start space-x-3">
+                                  <div className="p-2 bg-gray-100 rounded-full border">
+                                      {getDeviceIcon(s)}
                                   </div>
-                                  <p className="text-xs text-muted-foreground">IP: {s.deviceInfo.ip} • Device: {s.deviceInfo.deviceName}</p>
+                                  <div className="flex-1 space-y-1">
+                                      <div className="flex items-center justify-between">
+                                         <p className="font-medium text-sm">{s.deviceInfo.browser} trên {s.deviceInfo.os}</p>
+                                         {s.isActive && <Badge variant="outline" className="text-xs">Đang gắn token</Badge>}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">IP: {s.deviceInfo.ip} • Device: {s.deviceInfo.deviceName}</p>
+                                  </div>
+                              </div>
+              
+                              <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t mt-2">
+                                  <div>
+                                      <p className="text-muted-foreground">Đăng nhập</p>
+                                      <p className="font-medium">
+                                          {format(new Date(s.createdAt), "HH:mm dd/MM/yyyy", { locale: vi })}
+                                      </p>
+                                  </div>
+                                  <div>
+                                      <p className="text-muted-foreground">Hoạt động cuối</p>
+                                      <p className="font-medium">
+                                          {format(new Date(s.lastActive), "HH:mm dd/MM/yyyy", { locale: vi })}
+                                      </p>
+                                  </div>
+                                   {s.logoutAt && (
+                                       <div className="col-span-2 mt-1 bg-red-50 p-1.5 rounded text-red-700">
+                                           <span className="font-medium">Đã đăng xuất: </span> 
+                                           {format(new Date(s.logoutAt), "HH:mm dd/MM/yyyy", { locale: vi })}
+                                           {s.logoutReason && <span className="text-muted-foreground"> ({s.logoutReason})</span>}
+                                       </div>
+                                   )}
                               </div>
                           </div>
-          
-                          <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t mt-2">
-                              <div>
-                                  <p className="text-muted-foreground">Đăng nhập</p>
-                                  <p className="font-medium">
-                                      {format(new Date(s.createdAt), "HH:mm dd/MM/yyyy", { locale: vi })}
-                                  </p>
-                              </div>
-                              <div>
-                                  <p className="text-muted-foreground">Hoạt động cuối</p>
-                                  <p className="font-medium">
-                                      {format(new Date(s.lastActive), "HH:mm dd/MM/yyyy", { locale: vi })}
-                                  </p>
-                              </div>
-                               {s.logoutAt && (
-                                   <div className="col-span-2 mt-1 bg-red-50 p-1.5 rounded text-red-700">
-                                       <span className="font-medium">Đã đăng xuất: </span> 
-                                       {format(new Date(s.logoutAt), "HH:mm dd/MM/yyyy", { locale: vi })}
-                                       {s.logoutReason && <span className="text-muted-foreground"> ({s.logoutReason})</span>}
-                                   </div>
-                               )}
-                          </div>
-                      </div>
-                    ))}
-                 </div>
+                        ))}
+                     </div>
+                 )}
             </div>
         )}
       </DialogContent>
