@@ -301,5 +301,17 @@ class StudentsService {
             }
         });
     }
+    /**
+     * Lấy danh sách khóa học mà một sinh viên đang sở hữu thông qua Email
+     */
+    getStudentCoursesByEmail(email) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const normalizedEmail = email.toLowerCase();
+            return yield student_1.default.find({ email: normalizedEmail })
+                .populate("productId", "name status")
+                .select("-__v")
+                .lean();
+        });
+    }
 }
 exports.default = new StudentsService();

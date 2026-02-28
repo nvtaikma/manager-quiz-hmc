@@ -222,5 +222,23 @@ class StudentController {
             }
         });
     }
+    /**
+     * Lấy danh sách khóa học của sinh viên theo Email
+     */
+    getStudentCoursesByEmail(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { email } = req.params;
+                const result = yield student_service_1.default.getStudentCoursesByEmail(email);
+                return res.status(200).json({
+                    message: "Success",
+                    data: result,
+                });
+            }
+            catch (error) {
+                return (0, errorhandler_1.responseError)(res, error.message, 400);
+            }
+        });
+    }
 }
 exports.default = new StudentController();

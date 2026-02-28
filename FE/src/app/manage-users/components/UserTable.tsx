@@ -32,6 +32,7 @@ import {
   Clock,
   Calendar,
   BookOpen,
+  BookMarked
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/contants/api";
@@ -40,6 +41,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import UserSessionModal from "./UserSessionModal";
+import UserCoursesModal from "./UserCoursesModal";
 
 interface User {
   _id: string;
@@ -136,6 +138,10 @@ export function UserTable({
     React.useState(false);
   const [selectedUserForPracticeHistory, setSelectedUserForPracticeHistory] =
     React.useState<User | null>(null);
+
+  // User Courses state
+  const [showCoursesModal, setShowCoursesModal] = React.useState(false);
+  const [selectedUserForCourses, setSelectedUserForCourses] = React.useState<User | null>(null);
 
   // Helper function to format date
   const formatDate = (dateString: string | null | undefined) => {
@@ -343,6 +349,17 @@ export function UserTable({
                   <Button
                     variant="outline"
                     size="icon"
+                    onClick={() => {
+                        setSelectedUserForCourses(user);
+                        setShowCoursesModal(true);
+                    }}
+                    title="Xem khóa học đã sở hữu"
+                  >
+                    <BookMarked className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
                     onClick={() => handleViewExamHistory(user)}
                     title="Xem lịch sử thi"
                   >
@@ -409,6 +426,13 @@ export function UserTable({
         onClose={() => setShowSessionsModal(false)}
         userId={selectedUserForSessions?._id || null}
         userName={selectedUserForSessions?.name || ""}
+      />
+
+      <UserCoursesModal
+        isOpen={showCoursesModal}
+        onClose={() => setShowCoursesModal(false)}
+        userEmail={selectedUserForCourses?.email || null}
+        userName={selectedUserForCourses?.name || ""}
       />
 
       {/* Exam History Modal */}

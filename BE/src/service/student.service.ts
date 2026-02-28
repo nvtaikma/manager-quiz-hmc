@@ -1,4 +1,5 @@
 import Student from "../models/student";
+import Product from "../models/products"; // Sửa lại tên file model
 
 class StudentsService {
   async createStudent({
@@ -317,6 +318,17 @@ class StudentsService {
       console.error("Error fetching student tests:", error);
       throw error;
     }
+  }
+
+  /**
+   * Lấy danh sách khóa học mà một sinh viên đang sở hữu thông qua Email
+   */
+  async getStudentCoursesByEmail(email: string) {
+    const normalizedEmail = email.toLowerCase();
+    return await Student.find({ email: normalizedEmail })
+      .populate("productId", "name status")
+      .select("-__v")
+      .lean();
   }
 }
 

@@ -29,6 +29,12 @@ router.get(
   asyncHandler(studentController.getCountStudentByProductId)
 );
 
+// Lấy danh sách khóa học của sinh viên theo Email
+router.get(
+  "/email/:email/courses",
+  asyncHandler(studentController.getStudentCoursesByEmail)
+);
+
 // Thêm route mới để lấy danh sách khóa học của sinh viên
 router.get(
   "/:studentId/courses",

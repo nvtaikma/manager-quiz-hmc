@@ -220,6 +220,23 @@ class StudentController {
       return responseError(res, error.message, 400);
     }
   }
+  /**
+   * Lấy danh sách khóa học của sinh viên theo Email
+   */
+  async getStudentCoursesByEmail(req: Request, res: Response) {
+    try {
+      const { email } = req.params;
+
+      const result = await studentService.getStudentCoursesByEmail(email);
+
+      return res.status(200).json({
+        message: "Success",
+        data: result,
+      });
+    } catch (error: any) {
+      return responseError(res, error.message, 400);
+    }
+  }
 }
 
 export default new StudentController();

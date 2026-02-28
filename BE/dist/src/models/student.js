@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = require("mongoose");
 const studentSchema = new mongoose_1.Schema({
     email: { type: String, required: true, lowercase: true },
-    productId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Product" },
+    productId: { type: mongoose_1.Schema.Types.ObjectId, ref: "products" },
     orderId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Order" }, // Cột mới để liên kết theo sát đơn hàng
     status: {
         type: String,

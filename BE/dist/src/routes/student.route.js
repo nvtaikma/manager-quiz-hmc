@@ -15,6 +15,8 @@ router.delete("/delete/:productId/:email", (0, asynHandler_1.default)(student_co
 router.get("/check/:productId/:email", (0, asynHandler_1.default)(student_controller_1.default.getStudentByEmailAndProductId));
 router.get("/search/:productId", (0, asynHandler_1.default)(student_controller_1.default.searchStudentByProductId));
 router.get("/count/:productId", (0, asynHandler_1.default)(student_controller_1.default.getCountStudentByProductId));
+// Lấy danh sách khóa học của sinh viên theo Email
+router.get("/email/:email/courses", (0, asynHandler_1.default)(student_controller_1.default.getStudentCoursesByEmail));
 // Thêm route mới để lấy danh sách khóa học của sinh viên
 router.get("/:studentId/courses", (0, asynHandler_1.default)(student_middleware_1.validateStudent), (0, asynHandler_1.default)(student_middleware_1.getStudentCourses));
 // Thêm route mới để lấy danh sách đề thi của sinh viên theo khóa học
