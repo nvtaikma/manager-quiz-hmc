@@ -32,7 +32,11 @@ const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
       </div>
 
       {questions.map((question, index) => (
-        <div key={index} className="flex gap-6 border-b pb-6">
+        <div
+          key={index}
+          id={`question-row-${index}`}
+          className="flex gap-6 border-b pb-6"
+        >
           <div className="w-1/2">
             <QuestionEditor
               question={question}

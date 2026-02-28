@@ -436,7 +436,7 @@ export function CheckExamClient({ productId }: { productId: string }) {
           {/* Status Message */}
           {statusMessage && statusType && (
             <div
-              className={`mt-6 text-center font-medium ${getStatusColorClass(
+              className={`mt-6 text-center font-medium whitespace-pre-line ${getStatusColorClass(
                 statusType,
               )}`}
             >
@@ -538,7 +538,7 @@ export function CheckExamClient({ productId }: { productId: string }) {
           {/* Status Message in comparison mode */}
           {statusMessage && statusType && (
             <div
-              className={`mt-6 text-center font-medium ${getStatusColorClass(
+              className={`mt-6 text-center font-medium whitespace-pre-line ${getStatusColorClass(
                 statusType,
               )}`}
             >
