@@ -23,10 +23,24 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ questionText, index }) => {
   if (parts.length < 2) {
     return (
       <div
-        className="p-4 border border-gray-300 rounded-lg bg-white min-h-[150px]"
+        className="p-4 border-2 border-yellow-500 rounded-lg bg-yellow-50 min-h-[150px]"
         data-preview-for={index}
       >
-        {normalizedText}
+        <div className="mb-3 p-3 bg-yellow-100 border border-yellow-300 rounded-md">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            <div>
+              <p className="text-yellow-800 font-semibold text-sm">
+                Chưa tách đáp án
+              </p>
+              <p className="text-yellow-700 text-sm">
+                Câu hỏi này chưa có dấu # để tách đáp án. Hãy bấm &quot;Tách đáp
+                án&quot; hoặc thêm # thủ công.
+              </p>
+            </div>
+          </div>
+        </div>
+        <p className="text-gray-700 text-sm">{normalizedText}</p>
       </div>
     );
   }

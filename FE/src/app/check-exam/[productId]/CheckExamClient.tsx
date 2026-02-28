@@ -96,6 +96,43 @@ export function CheckExamClient({ productId }: { productId: string }) {
 
   // Show comparison view - chuyển sang bước 3
   const showComparisonView = useCallback(async () => {
+    // === VALIDATION: Kiểm tra tất cả câu hỏi đã tách đáp án đúng chưa ===
+    const invalidQuestions: { index: number; answerCount: number }[] = [];
+
+    extractedQuestions.forEach((q, idx) => {
+      const parts = q
+        .replace(/#{2,}/g, "#")
+        .split("#")
+        .map((p) => p.trim())
+        .filter((p) => p);
+
+      // parts[0] = câu hỏi, parts[1..4] = đáp án A B C D
+      const answerCount = parts.length - 1; // trừ phần câu hỏi
+      if (answerCount !== 4) {
+        invalidQuestions.push({ index: idx + 1, answerCount });
+      }
+    });
+
+    if (invalidQuestions.length > 0) {
+      const notSeparated = invalidQuestions.filter((q) => q.answerCount === 0);
+      const wrongCount = invalidQuestions.filter((q) => q.answerCount > 0);
+
+      let errorMsg = `⚠️ Không thể chuyển sang bước 3. Có ${invalidQuestions.length} câu hỏi chưa hợp lệ:\n`;
+
+      if (notSeparated.length > 0) {
+        errorMsg += `\n• ${notSeparated.length} câu chưa tách đáp án (câu ${notSeparated.map((q) => q.index).join(", ")})`;
+      }
+      if (wrongCount.length > 0) {
+        errorMsg += `\n• ${wrongCount.length} câu có số đáp án sai (${wrongCount.map((q) => `câu ${q.index}: ${q.answerCount} đáp án`).join(", ")})`;
+      }
+      errorMsg += `\n\nVui lòng kiểm tra và sửa lại trước khi tiếp tục.`;
+
+      setStatusMessage(errorMsg);
+      setStatusType("error");
+      return;
+    }
+    // === END VALIDATION ===
+
     setIsLoading(true);
 
     try {
@@ -120,7 +157,13 @@ export function CheckExamClient({ productId }: { productId: string }) {
     } finally {
       setIsLoading(false);
     }
-  }, [generateJsonData, fetchAllQuestions, apiJsonData.length, setIsLoading]);
+  }, [
+    generateJsonData,
+    fetchAllQuestions,
+    apiJsonData.length,
+    setIsLoading,
+    extractedQuestions,
+  ]);
 
   // Callback để nhận kết quả so sánh từ ComparisonView
   const handleComparisonComplete = useCallback(
