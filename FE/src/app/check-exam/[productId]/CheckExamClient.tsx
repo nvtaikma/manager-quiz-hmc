@@ -12,7 +12,6 @@ import usePdfProcessor from "./hooks/usePdfProcessor";
 import useExportFunctions from "./hooks/useExportFunctions";
 import useComparison from "./hooks/useComparison";
 import useDeduplication from "./hooks/useDeduplication";
-// import { ComparisonResults } from "./hooks/useComparison";
 
 // Import các components
 import FileUploader from "./components/FileUploader";
@@ -25,17 +24,16 @@ import DeduplicationResults from "./components/DeduplicationResults";
 import ExportControls from "./components/ExportControls";
 import StepNavigation from "./components/StepNavigation";
 
+// Status message type
+type StatusType = "success" | "error" | "info" | "warning" | null;
+
 // Client Component nhận productId trực tiếp từ props
 export function CheckExamClient({ productId }: { productId: string }) {
   const router = useRouter();
 
   // Sử dụng các hooks tùy chỉnh
   const { product, loading: productLoading } = useProduct(productId);
-  const {
-    apiJsonData,
-    loading: questionsLoading,
-    fetchAllQuestions,
-  } = useQuestions(productId);
+  const { apiJsonData, fetchAllQuestions } = useQuestions(productId);
 
   const {
     pdfFiles,
@@ -60,8 +58,6 @@ export function CheckExamClient({ productId }: { productId: string }) {
   } = useExportFunctions();
 
   const {
-    similarityThreshold,
-    setSimilarityThreshold,
     comparisonResults,
     setComparisonResults,
     calculateOptimizedSimilarity,
@@ -81,6 +77,10 @@ export function CheckExamClient({ productId }: { productId: string }) {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [viewMode, setViewMode] = useState<"main" | "comparison">("main");
 
+  // State cho status message (thay thế DOM manipulation)
+  const [statusMessage, setStatusMessage] = useState<string>("");
+  const [statusType, setStatusType] = useState<StatusType>(null);
+
   // Các bước trong quy trình
   const steps = [
     { id: 1, name: "Tải lên PDF" },
@@ -99,56 +99,28 @@ export function CheckExamClient({ productId }: { productId: string }) {
     setIsLoading(true);
 
     try {
-      // Luôn chuyển đổi dữ liệu PDF sang JSON mới nhất cho việc so sánh
-      console.log("Chuyển đổi dữ liệu PDF sang JSON cho việc so sánh");
       const jsonData = generateJsonData();
-      console.log(`Đã chuyển đổi ${jsonData.length} câu hỏi sang dạng JSON`);
 
-      // Chuyển sang chế độ so sánh
       setViewMode("comparison");
-      setCurrentStep(3); // Đảm bảo step indicator hiển thị đúng
+      setCurrentStep(3);
 
-      // Không cần fetch lại dữ liệu từ API vì đã tải khi component mount
       if (apiJsonData.length === 0) {
-        console.log("Đang tải dữ liệu câu hỏi từ API...");
         await fetchAllQuestions();
-        console.log("Đã tải xong dữ liệu API:", apiJsonData.length, "câu hỏi");
-      } else {
-        console.log(
-          "Sử dụng dữ liệu API đã có sẵn:",
-          apiJsonData.length,
-          "câu hỏi"
-        );
       }
 
-      const messageArea = document.getElementById("message-area");
-      if (messageArea) {
-        messageArea.textContent = `Đã chuyển đổi ${jsonData.length} câu hỏi sang dạng JSON và sẵn sàng để so sánh.`;
-        messageArea.className = "mt-6 text-center font-medium text-green-600";
-      }
+      setStatusMessage(
+        `Đã chuyển đổi ${jsonData.length} câu hỏi sang dạng JSON và sẵn sàng để so sánh.`,
+      );
+      setStatusType("success");
     } catch (error) {
-      console.error("Lỗi khi chuẩn bị dữ liệu để so sánh:", error);
-      const messageArea = document.getElementById("message-area");
-      if (messageArea) {
-        messageArea.textContent = `Lỗi: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`;
-        messageArea.className = "mt-6 text-center font-medium text-red-600";
-      }
+      setStatusMessage(
+        `Lỗi: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+      setStatusType("error");
     } finally {
       setIsLoading(false);
     }
   }, [generateJsonData, fetchAllQuestions, apiJsonData.length, setIsLoading]);
-
-  // Xử lý so sánh kết quả
-  const handleCompare = useCallback(() => {
-    if (pdfJsonData.length === 0 || apiJsonData.length === 0) {
-      return;
-    }
-    // Make sure comparison results are set in the parent component state
-    const results = compareResults(pdfJsonData, apiJsonData);
-    console.log("Comparison completed, results:", results);
-  }, [pdfJsonData, apiJsonData, compareResults]);
 
   // Callback để nhận kết quả so sánh từ ComparisonView
   const handleComparisonComplete = useCallback(
@@ -160,79 +132,41 @@ export function CheckExamClient({ productId }: { productId: string }) {
       percentage: number;
       usedApiIndices: Set<number>;
     }) => {
-      console.log("Received comparison results from ComparisonView:", results);
-
-      // Cập nhật state trong component cha
       setComparisonResults(results);
-
-      // Kiểm tra tính hợp lệ của kết quả
-      if (
-        !results ||
-        !results.unmatchedPdfIndices ||
-        results.unmatchedPdfIndices.length === 0
-      ) {
-        console.log("No unmatched questions to process for deduplication");
-      } else {
-        console.log(
-          `Found ${results.unmatchedPdfIndices.length} unmatched questions ready for deduplication`
-        );
-      }
     },
-    [setComparisonResults]
+    [setComparisonResults],
   );
 
   // Xử lý chuyển sang bước loại bỏ trùng lặp
   const handleProceedToDeduplication = useCallback(() => {
-    console.log("Proceeding to deduplication step", comparisonResults);
-
-    // Kiểm tra tính hợp lệ của dữ liệu
     if (!comparisonResults) {
-      console.error(
-        "Cannot proceed to deduplication: comparison results are null"
+      setStatusMessage(
+        "Lỗi: Không có kết quả so sánh để xử lý. Vui lòng thực hiện so sánh lại.",
       );
-      // Hiển thị thông báo lỗi cho người dùng
-      const messageArea = document.getElementById("message-area");
-      if (messageArea) {
-        messageArea.textContent =
-          "Lỗi: Không có kết quả so sánh để xử lý. Vui lòng thực hiện so sánh lại.";
-        messageArea.className = "mt-6 text-center font-medium text-red-600";
-      }
+      setStatusType("error");
       return;
     }
 
     if (comparisonResults.unmatchedPdfIndices.length === 0) {
-      console.log("No unmatched questions to deduplicate");
-      // Hiển thị thông báo cho người dùng
-      const messageArea = document.getElementById("message-area");
-      if (messageArea) {
-        messageArea.textContent =
-          "Không có câu hỏi chưa khớp để xử lý trùng lặp.";
-        messageArea.className = "mt-6 text-center font-medium text-yellow-600";
-      }
+      setStatusMessage("Không có câu hỏi chưa khớp để xử lý trùng lặp.");
+      setStatusType("warning");
       return;
     }
 
     try {
-      // Tiến hành loại bỏ trùng lặp và chuyển sang bước 4
       deduplicateUnmatchedQuestions(comparisonResults, pdfJsonData);
       setCurrentStep(4);
+      setStatusMessage("");
+      setStatusType(null);
     } catch (error) {
-      console.error("Error during deduplication:", error);
-      // Hiển thị thông báo lỗi cho người dùng
-      const messageArea = document.getElementById("message-area");
-      if (messageArea) {
-        messageArea.textContent = `Lỗi khi xử lý trùng lặp: ${
+      setStatusMessage(
+        `Lỗi khi xử lý trùng lặp: ${
           error instanceof Error ? error.message : "Unknown error"
-        }`;
-        messageArea.className = "mt-6 text-center font-medium text-red-600";
-      }
+        }`,
+      );
+      setStatusType("error");
     }
-  }, [
-    comparisonResults,
-    pdfJsonData,
-    deduplicateUnmatchedQuestions,
-    setCurrentStep,
-  ]);
+  }, [comparisonResults, pdfJsonData, deduplicateUnmatchedQuestions]);
 
   // Xử lý các chức năng xuất dữ liệu
   const handleExportJson = useCallback(() => {
@@ -247,13 +181,11 @@ export function CheckExamClient({ productId }: { productId: string }) {
   const handleExportUnmatchedToWord = useCallback(() => {
     if (!comparisonResults) return;
 
-    // Nếu đang ở bước 4, sử dụng danh sách câu hỏi sau khi loại bỏ trùng lặp
     if (currentStep === 4) {
       exportUnmatchedToWord(deduplicationState.deduplicated);
     } else {
-      // Nếu đang ở bước 3, sử dụng danh sách câu hỏi chưa khớp
       const questionsToExport = comparisonResults.unmatchedPdfIndices.map(
-        (index) => pdfJsonData[index]
+        (index) => pdfJsonData[index],
       );
       exportUnmatchedToWord(questionsToExport);
     }
@@ -271,6 +203,9 @@ export function CheckExamClient({ productId }: { productId: string }) {
 
   // Điều hướng giữa các bước
   const handleGoBack = useCallback(() => {
+    setStatusMessage("");
+    setStatusType(null);
+
     if (currentStep === 2) {
       setCurrentStep(1);
     } else if (currentStep === 3) {
@@ -307,7 +242,25 @@ export function CheckExamClient({ productId }: { productId: string }) {
     resetPdfState();
     setCurrentStep(1);
     setViewMode("main");
+    setStatusMessage("");
+    setStatusType(null);
   }, [resetPdfState]);
+
+  // Helper: status message color class
+  const getStatusColorClass = (type: StatusType) => {
+    switch (type) {
+      case "success":
+        return "text-green-600";
+      case "error":
+        return "text-red-600";
+      case "info":
+        return "text-blue-600";
+      case "warning":
+        return "text-yellow-600";
+      default:
+        return "";
+    }
+  };
 
   // Loading state
   if (productLoading) {
@@ -334,48 +287,6 @@ export function CheckExamClient({ productId }: { productId: string }) {
         </div>
       </div>
 
-      <style jsx global>{`
-        .loader {
-          border-top-color: #3498db;
-          -webkit-animation: spinner 1.5s linear infinite;
-          animation: spinner 1.5s linear infinite;
-        }
-
-        @-webkit-keyframes spinner {
-          0% {
-            -webkit-transform: rotate(0deg);
-          }
-          100% {
-            -webkit-transform: rotate(360deg);
-          }
-        }
-
-        @keyframes spinner {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
-        }
-
-        .step-active {
-          animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-          0% {
-            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
-          }
-          70% {
-            box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
-          }
-          100% {
-            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
-          }
-        }
-      `}</style>
-
       {viewMode === "main" ? (
         <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8">
           <header className="text-center mb-6">
@@ -383,7 +294,6 @@ export function CheckExamClient({ productId }: { productId: string }) {
               Trình Trích Xuất Câu Hỏi từ PDF
             </h1>
 
-            {/* Step Navigation */}
             <StepNavigation
               steps={steps}
               currentStep={currentStep}
@@ -423,33 +333,23 @@ export function CheckExamClient({ productId }: { productId: string }) {
                   onProcessComplete={(extractedQuestionsResult) => {
                     setIsLoading(false);
                     setExtractedQuestions(extractedQuestionsResult);
-
-                    // Thông báo thành công
-                    const messageArea = document.getElementById("message-area");
-                    if (messageArea) {
-                      messageArea.textContent = `Đã tìm thấy ${extractedQuestionsResult.length} câu hỏi. Bạn có thể chỉnh sửa chúng.`;
-                      messageArea.className =
-                        "mt-6 text-center font-medium text-green-600";
-                    }
-
-                    // Tự động chuyển sang bước 2
+                    setStatusMessage(
+                      `Đã tìm thấy ${extractedQuestionsResult.length} câu hỏi. Bạn có thể chỉnh sửa chúng.`,
+                    );
+                    setStatusType("success");
                     setCurrentStep(2);
                   }}
                   onError={(errorMessage) => {
                     setIsLoading(false);
-                    const messageArea = document.getElementById("message-area");
-                    if (messageArea) {
-                      messageArea.textContent = `Lỗi: ${errorMessage}`;
-                      messageArea.className =
-                        "mt-6 text-center font-medium text-red-600";
-                    }
+                    setStatusMessage(`Lỗi: ${errorMessage}`);
+                    setStatusType("error");
                   }}
                 />
               </div>
             </>
           )}
 
-          {/* Step 2 - Extract Answers - GỘP CẢ BƯỚC 3 */}
+          {/* Step 2 - Extract Answers */}
           {currentStep === 2 && (
             <>
               <div className="mt-6 flex justify-center">
@@ -459,36 +359,12 @@ export function CheckExamClient({ productId }: { productId: string }) {
                   onSeparateComplete={(processedQuestions) => {
                     setExtractedQuestions(processedQuestions);
                     generateJsonData();
-
-                    const messageArea = document.getElementById("message-area");
-                    if (messageArea) {
-                      messageArea.textContent =
-                        "Đã tách các đáp án bằng dấu #. Bạn có thể chỉnh sửa ở cột bên trái và xem kết quả bên phải.";
-                      messageArea.className =
-                        "mt-6 text-center font-medium text-blue-600";
-                    }
+                    setStatusMessage(
+                      "Đã tách các đáp án bằng dấu #. Bạn có thể chỉnh sửa ở cột bên trái và xem kết quả bên phải.",
+                    );
+                    setStatusType("info");
                   }}
                 />
-
-                {/* <ExportControls
-                  currentStep={currentStep}
-                  hasExtractedQuestions={extractedQuestions.length > 0}
-                  hasComparisonResults={false}
-                  hasDeduplicationResults={false}
-                  duplicateGroupsCount={0}
-                  onExportWord={handleExportWord}
-                  onExportJson={handleExportJson}
-                  onExportUnmatchedWord={() => {}}
-                  onExportDetailedReport={() => {}}
-                />
-
-                <Button
-                  variant="default"
-                  className="bg-indigo-600"
-                  onClick={showComparisonView}
-                >
-                  Chuyển sang JSON và so sánh câu hỏi
-                </Button> */}
               </div>
               <div id="preview-section" className="mt-4">
                 <h2 className="text-2xl font-bold text-gray-800 border-b pb-2 mb-4">
@@ -508,12 +384,22 @@ export function CheckExamClient({ productId }: { productId: string }) {
           )}
 
           {isLoading && (
-            <div id="loader" className="mt-6 text-center">
+            <div className="mt-6 text-center">
               <div className="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-16 w-16 mx-auto"></div>
               <p className="mt-4 text-gray-600 font-medium">Đang xử lý...</p>
             </div>
           )}
-          <div id="message-area" className="mt-6 text-center font-medium"></div>
+
+          {/* Status Message */}
+          {statusMessage && statusType && (
+            <div
+              className={`mt-6 text-center font-medium ${getStatusColorClass(
+                statusType,
+              )}`}
+            >
+              {statusMessage}
+            </div>
+          )}
         </div>
       ) : (
         <div className="w-full max-w-7xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8">
@@ -522,7 +408,6 @@ export function CheckExamClient({ productId }: { productId: string }) {
               So sánh Đề thi và Đề cương
             </h1>
 
-            {/* Step Navigation */}
             <StepNavigation
               steps={steps}
               currentStep={currentStep}
@@ -555,7 +440,6 @@ export function CheckExamClient({ productId }: { productId: string }) {
                 onComparisonComplete={handleComparisonComplete}
               />
 
-              {/* Nếu đã có kết quả so sánh, hiển thị ComparisonResults */}
               {comparisonResults && (
                 <ComparisonResults
                   results={comparisonResults}
@@ -565,7 +449,6 @@ export function CheckExamClient({ productId }: { productId: string }) {
                 />
               )}
 
-              {/* Export Controls */}
               <ExportControls
                 currentStep={currentStep}
                 hasExtractedQuestions={extractedQuestions.length > 0}
@@ -583,7 +466,6 @@ export function CheckExamClient({ productId }: { productId: string }) {
           {/* Step 4 - Loại bỏ trùng lặp */}
           {currentStep === 4 && (
             <>
-              {/* Export Controls */}
               <ExportControls
                 currentStep={currentStep}
                 hasExtractedQuestions={extractedQuestions.length > 0}
@@ -598,7 +480,6 @@ export function CheckExamClient({ productId }: { productId: string }) {
                 onExportDetailedReport={handleExportDetailedReport}
               />
 
-              {/* Hiển thị kết quả loại bỏ trùng lặp */}
               <DeduplicationResults
                 deduplicationState={deduplicationState}
                 expandedGroups={expandedGroups}
@@ -609,6 +490,17 @@ export function CheckExamClient({ productId }: { productId: string }) {
                 onExportDetailedReport={handleExportDetailedReport}
               />
             </>
+          )}
+
+          {/* Status Message in comparison mode */}
+          {statusMessage && statusType && (
+            <div
+              className={`mt-6 text-center font-medium ${getStatusColorClass(
+                statusType,
+              )}`}
+            >
+              {statusMessage}
+            </div>
           )}
         </div>
       )}

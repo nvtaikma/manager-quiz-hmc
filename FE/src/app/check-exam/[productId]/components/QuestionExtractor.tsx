@@ -3,8 +3,17 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 
-interface TextItem {
+/**
+ * Extended TextItem interface bao gồm position data từ PDF.js
+ */
+interface PdfTextItem {
   str: string;
+  dir: string;
+  width: number;
+  height: number;
+  transform: number[];
+  fontName: string;
+  hasEOL: boolean;
 }
 
 interface QuestionExtractorProps {
@@ -16,6 +25,141 @@ interface QuestionExtractorProps {
   onError: (error: string) => void;
 }
 
+/**
+ * Chuẩn hóa text tiếng Việt - sửa lỗi tách dấu (BẢO THỦ)
+ * CHỈ merge khi phần trước là ký tự đơn lẻ (1-3 chars, không chứa nguyên âm)
+ * KHÔNG merge khi phần trước là 1 âm tiết hoàn chỉnh (có nguyên âm rồi)
+ */
+function normalizeVietnameseText(text: string): string {
+  const allVietnameseVowels =
+    "aàáảãạăắằẳẵặâấầẩẫậeèéẻẽẹêếềểễệiìíỉĩịoòóỏõọôốồổỗộơớờởỡợuùúủũụưứừửữựyỳýỷỹỵ";
+  const allVietnameseUpperVowels =
+    "AÀÁẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬEÈÉẺẼẸÊẾỀỂỄỆIÌÍỈĨỊOÒÓỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢUÙÚỦŨỤƯỨỪỬỮỰYỲÝỶỸỴ";
+  const vietnameseDiacriticVowels =
+    "àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵ";
+  const vietnameseUpperDiacriticVowels =
+    "ÀÁẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬÈÉẺẼẸÊẾỀỂỄỆÌÍỈĨỊÒÓỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÙÚỦŨỤƯỨỪỬỮỰỲÝỶỸỴ";
+
+  const containsVowel = (s: string): boolean => {
+    for (const c of s) {
+      if (
+        allVietnameseVowels.includes(c) ||
+        allVietnameseUpperVowels.includes(c)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  let result = text;
+
+  // Pattern 1: (từ) + space + (nguyên âm có dấu + phần còn lại)
+  // CHỈ nối nếu phần trước KHÔNG chứa nguyên âm VÀ ngắn (1-3 ký tự)
+  const diacriticVowelChars = `${vietnameseDiacriticVowels}${vietnameseUpperDiacriticVowels}`;
+  const allVowelChars = `${allVietnameseVowels}${allVietnameseUpperVowels}`;
+
+  const splitWordPattern = new RegExp(
+    `(\\S+) ([${diacriticVowelChars}][a-zA-Z${allVowelChars}đĐ]*)`,
+    "g",
+  );
+  result = result.replace(splitWordPattern, (match, before, after) => {
+    if (!containsVowel(before) && before.length <= 3) {
+      return before + after;
+    }
+    return match;
+  });
+
+  // Pattern 2: Nguyên âm có dấu + space + phụ âm cuối đơn lẻ (1-2 ký tự, không chứa nguyên âm)
+  const vowelEndPattern = new RegExp(
+    `([${diacriticVowelChars}]) ([a-zA-ZđĐ]{1,2})(?=\\s|[^a-zA-Z${allVowelChars}đĐ]|$)`,
+    "g",
+  );
+  result = result.replace(vowelEndPattern, (match, vowel, ending) => {
+    if (!containsVowel(ending)) {
+      return vowel + ending;
+    }
+    return match;
+  });
+
+  // Pattern 3: Ký tự đơn lẻ liên tiếp (đ ặ c → đặc)
+  for (let i = 0; i < 5; i++) {
+    const before = result;
+    result = result.replace(
+      /(?<=\s|^)([a-zA-ZđĐàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵ]) ([a-zA-ZđĐàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵ])(?=\s|[^a-zA-ZđĐàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵ]|$)/g,
+      "$1$2",
+    );
+    if (result === before) break;
+  }
+
+  result = result.replace(/ {2,}/g, " ");
+  return result;
+}
+
+/**
+ * Trích xuất text từ PDF page sử dụng vị trí tọa độ
+ */
+function extractTextFromPage(textContent: { items: PdfTextItem[] }): string {
+  const items = textContent.items;
+  if (items.length === 0) return "";
+
+  const lines: string[] = [];
+  let currentLine = "";
+  let lastItem: PdfTextItem | null = null;
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+
+    if (item.str === "") {
+      if (item.hasEOL) {
+        if (currentLine.trim()) lines.push(currentLine);
+        currentLine = "";
+        lastItem = null;
+      }
+      continue;
+    }
+
+    if (lastItem === null) {
+      currentLine = item.str;
+    } else {
+      const lastY = lastItem.transform[5];
+      const currentY = item.transform[5];
+      const fontSize = Math.abs(item.transform[0]) || 12;
+
+      if (Math.abs(lastY - currentY) > fontSize * 0.5) {
+        if (currentLine.trim()) lines.push(currentLine);
+        currentLine = item.str;
+      } else {
+        const lastEndX = lastItem.transform[4] + lastItem.width;
+        const currentStartX = item.transform[4];
+        const gap = currentStartX - lastEndX;
+        // Giảm từ 0.3 xuống 0.15 để phát hiện khoảng trắng giữa từ tốt hơn
+        const spaceThreshold = fontSize * 0.15;
+
+        if (gap > spaceThreshold) {
+          currentLine += " " + item.str;
+        } else if (gap < -fontSize * 0.5) {
+          if (currentLine.trim()) lines.push(currentLine);
+          currentLine = item.str;
+        } else {
+          currentLine += item.str;
+        }
+      }
+    }
+
+    if (item.hasEOL) {
+      if (currentLine.trim()) lines.push(currentLine);
+      currentLine = "";
+      lastItem = null;
+    } else {
+      lastItem = item;
+    }
+  }
+
+  if (currentLine.trim()) lines.push(currentLine);
+  return lines.join("\n");
+}
+
 const QuestionExtractor: React.FC<QuestionExtractorProps> = ({
   pdfFiles,
   pdfLoaded,
@@ -24,7 +168,7 @@ const QuestionExtractor: React.FC<QuestionExtractorProps> = ({
   onProcessComplete,
   onError,
 }) => {
-  // Xử lý PDF files
+  // Xử lý PDF files - sử dụng position-aware extraction
   const processPdfFiles = async () => {
     if (!pdfFiles || pdfFiles.length === 0) return;
 
@@ -33,15 +177,11 @@ const QuestionExtractor: React.FC<QuestionExtractorProps> = ({
     try {
       if (!pdfLoaded || !window.pdfjsLib) {
         throw new Error(
-          "Thư viện PDF.js chưa được tải xong. Vui lòng đợi một chút và thử lại."
+          "Thư viện PDF.js chưa được tải xong. Vui lòng đợi một chút và thử lại.",
         );
       }
 
-      console.log("Bắt đầu xử lý PDF...");
-      console.log("Số lượng file:", pdfFiles.length);
-
       const fileProcessingPromises = Array.from(pdfFiles).map((file) => {
-        console.log("Xử lý file:", file.name);
         return new Promise<string>((resolve, reject) => {
           const fileReader = new FileReader();
           fileReader.onload = async function () {
@@ -49,19 +189,20 @@ const QuestionExtractor: React.FC<QuestionExtractorProps> = ({
               const typedarray = new Uint8Array(this.result as ArrayBuffer);
               const pdf = await window.pdfjsLib.getDocument(typedarray.buffer)
                 .promise;
-              console.log(`File ${file.name} có ${pdf.numPages} trang`);
 
               let fullText = "";
               for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
                 const textContent = await page.getTextContent();
-                const pageText = textContent.items
-                  .map((item: TextItem) => item.str)
-                  .join(" ");
-                fullText += pageText + "\n\n";
-                console.log(
-                  `Đã xử lý trang ${i}/${pdf.numPages} của file ${file.name}`
+
+                // Sử dụng position-aware extraction
+                const pageText = extractTextFromPage(
+                  textContent as { items: PdfTextItem[] },
                 );
+
+                // Post-process: chuẩn hóa tiếng Việt
+                const normalizedPageText = normalizeVietnameseText(pageText);
+                fullText += normalizedPageText + "\n\n";
               }
               resolve(fullText);
             } catch (e) {
@@ -70,7 +211,6 @@ const QuestionExtractor: React.FC<QuestionExtractorProps> = ({
             }
           };
           fileReader.onerror = () => {
-            console.error(`Không thể đọc tệp ${file.name}`);
             reject(new Error(`Không thể đọc tệp ${file.name}`));
           };
           fileReader.readAsArrayBuffer(file);
@@ -78,19 +218,13 @@ const QuestionExtractor: React.FC<QuestionExtractorProps> = ({
       });
 
       const combinedText = (await Promise.all(fileProcessingPromises)).join(
-        "\n\n"
+        "\n\n",
       );
-      console.log("Đã kết hợp văn bản từ tất cả các tệp PDF");
-      console.log("Độ dài văn bản:", combinedText.length);
 
       // Phân tích và tìm câu hỏi từ văn bản
       const extractedQuestionsResult = extractQuestionsFromText(combinedText);
 
       if (extractedQuestionsResult.length > 0) {
-        console.log(`Đã tìm thấy ${extractedQuestionsResult.length} câu hỏi`);
-        console.log("Câu hỏi đầu tiên:", extractedQuestionsResult[0]);
-
-        // Trả về kết quả
         onProcessComplete(extractedQuestionsResult);
       } else {
         onError("Không tìm thấy câu hỏi nào.");
@@ -103,69 +237,51 @@ const QuestionExtractor: React.FC<QuestionExtractorProps> = ({
 
   // Trích xuất câu hỏi từ văn bản
   const extractQuestionsFromText = (text: string) => {
-    console.log("Bắt đầu phân tích câu hỏi từ văn bản...");
-    console.log("Độ dài văn bản:", text.length);
-    console.log("Mẫu văn bản:", text.substring(0, 300) + "...");
-
     const normalizedText = text
       .replace(/(\r\n|\n|\r)/gm, "\n")
       .replace(/ +/g, " ");
 
-    // Thử nhiều mẫu regex khác nhau
     let matches: string[] = [];
 
-    // Mẫu 1: Câu hỏi X:
+    // Mẫu 1: Câu hỏi X: hoặc Câu X:
     const regex1 =
-      /(Câu\s*(?:hỏi)?\s*\d+\s*[:.][\s\S]*?)(?=\n*Câu\s*(?:hỏi)?\s*\d+\s*[:.]|\s*$)/g;
+      /(Câu\s*(?:hỏi)?\s*\d+\s*[:.]\s*[\s\S]*?)(?=\n*Câu\s*(?:hỏi)?\s*\d+\s*[:.]|\s*$)/g;
     const matches1 = normalizedText.match(regex1);
     if (matches1 && matches1.length > 0) {
       matches = matches1;
-      console.log(`Tìm thấy ${matches.length} câu hỏi với mẫu 1`);
     }
 
     // Nếu không tìm thấy, thử mẫu 2
     if (matches.length === 0) {
-      console.log("Không tìm thấy câu hỏi với mẫu 1, thử mẫu 2...");
       const regex2 = /(\d+\s*[:.]\s*[\s\S]*?)(?=\n*\d+\s*[:.]\s*|\s*$)/g;
       const matches2 = normalizedText.match(regex2);
       if (matches2 && matches2.length > 0) {
         matches = matches2;
-        console.log(`Tìm thấy ${matches.length} câu hỏi với mẫu 2`);
       }
     }
 
-    // Nếu vẫn không tìm thấy, thử mẫu 3
+    // Nếu vẫn không tìm thấy, chia theo đoạn
     if (matches.length === 0) {
-      console.log("Không tìm thấy câu hỏi với mẫu 2, thử mẫu 3...");
-      // Chia văn bản thành các đoạn và coi mỗi đoạn là một câu hỏi
       const paragraphs = normalizedText
         .split(/\n\s*\n/)
         .filter((p) => p.trim().length > 0);
       if (paragraphs.length > 0) {
         matches = paragraphs;
-        console.log(`Tìm thấy ${matches.length} đoạn văn với mẫu 3`);
       }
     }
 
     if (matches.length > 0) {
-      console.log(`Tổng cộng đã tìm thấy ${matches.length} câu hỏi`);
-      console.log("Câu hỏi đầu tiên:", matches[0]);
-
-      // Xử lý mỗi câu hỏi để loại bỏ tiền tố "câu hỏi X:"
       const processedMatches = matches.map((match) => {
         let processedMatch = match.trim();
-        // Loại bỏ tiền tố "câu hỏi X:" nếu có
         processedMatch = processedMatch
-          .replace(/^câu\s*hỏi\s*\d+\s*[:\.]/i, "")
+          .replace(/^câu\s*hỏi\s*\d+\s*[:.]/i, "")
           .trim();
-        // Cũng loại bỏ tiền tố số nếu có
-        processedMatch = processedMatch.replace(/^\d+[\.:]\s*/i, "").trim();
+        processedMatch = processedMatch.replace(/^\d+[.:] */, "").trim();
         return processedMatch;
       });
 
       return processedMatches;
     } else {
-      console.log("Không tìm thấy câu hỏi nào!");
       return [];
     }
   };
