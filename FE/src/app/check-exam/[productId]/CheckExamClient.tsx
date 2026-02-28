@@ -23,6 +23,7 @@ import ComparisonResults from "./components/ComparisonResults";
 import DeduplicationResults from "./components/DeduplicationResults";
 import ExportControls from "./components/ExportControls";
 import StepNavigation from "./components/StepNavigation";
+import AnswerValidation from "./components/AnswerValidation";
 
 // Status message type
 type StatusType = "success" | "error" | "info" | "warning" | null;
@@ -409,6 +410,10 @@ export function CheckExamClient({ productId }: { productId: string }) {
                   }}
                 />
               </div>
+
+              {/* Validation Panel - hiển thị câu hỏi lỗi ngay sau khi tách */}
+              <AnswerValidation questions={extractedQuestions} />
+
               <div id="preview-section" className="mt-4">
                 <h2 className="text-2xl font-bold text-gray-800 border-b pb-2 mb-4">
                   Xem trước & Chỉnh sửa các câu hỏi
