@@ -2,7 +2,7 @@
   "meta": {
     "schema_version": "1.1.0",
     "awf_version": "3.3.0",
-    "last_updated": "2026-02-02"
+    "last_updated": "2026-03-13"
   },
   "project": {
     "name": "Manager Quiz HMC",
@@ -13,7 +13,9 @@
     "frontend": {
       "framework": "Next.js",
       "styling": "TailwindCSS",
-      "state_management": "React Hooks"
+      "state_management": "React Hooks",
+      "pdf_processing": "PDF.js (loaded via CDN in layout.tsx)",
+      "document_export": "docx.js + FileSaver.js (loaded via CDN)"
     },
     "backend": {
       "framework": "Express.js",
@@ -82,16 +84,49 @@
       "name": "Timetable Management",
       "description": "View and Import timetables via JSON.",
       "status": "Implemented"
+    },
+    {
+      "name": "Check Exam (PDF Processing)",
+      "description": "Upload PDF exam files → Extract questions → Separate answers → Compare with API syllabus → Deduplicate unmatched questions → Export results to JSON/Word.",
+      "status": "Implemented",
+      "sub_features": [
+        "Position-aware PDF text extraction (prevents Vietnamese diacritical splitting)",
+        "Vietnamese text normalization (conservative - only merges incomplete syllables)",
+        "Context-aware answer separation (validates A→B→C→D order, ≥3 answers, line-start detection)",
+        "Real-time answer validation panel with click-to-scroll to problematic questions",
+        "Similarity-based question comparison with API data",
+        "Question deduplication for unmatched questions",
+        "Export to Word/JSON with formatted output",
+        "Two-mode input system: PDF Upload or Raw Text Paste",
+        "Enhanced FileUploader UI with file listing, size display, and clear controls",
+        "Context-free text input parser for structured question/answer formats"
+      ]
     }
   ],
   "knowledge_items": {
     "patterns": [
       "Modular architecture in Backend (modules/class, modules/timetable).",
-      "Service-Controller-Route pattern."
+      "Service-Controller-Route pattern.",
+      "Check-exam uses multi-step wizard pattern: Upload → Edit → Compare → Deduplicate.",
+      "React state management replaces direct DOM manipulation for status messages.",
+      "Position-aware PDF extraction uses TextItem.transform[4] (x-pos) and width to detect word boundaries."
     ],
     "gotchas": [
       "MongoDB Transaction requires Replica Set. For standalone, use sequential Delete -> Insert logic.",
-      "Importing Timetable performs a HARD REPLACE (Delete old -> Insert new)."
+      "Importing Timetable performs a HARD REPLACE (Delete old -> Insert new).",
+      "PDF.js TextItem spacing: gap < 15% fontSize = same word (diacritical split), gap > 15% = separate words. 30% was too aggressive and caused word merging.",
+      "Vietnamese normalizeVietnameseText MUST be conservative: Only merge when prefix has NO vowel AND ≤3 chars. 'Chán ăn' has vowel 'á' in 'Chán' → do NOT merge. 'M ẫu' has no vowel in 'M' → merge.",
+      "AnswerSeparator regex must NOT use greedy patterns matching any A/B/C/D with whitespace. Must require line-start position + validate ≥3 answers in A→B→C→D order to avoid false positives like 'Vitamin C', 'Người bệnh B'.",
+      "Answer marker regex lookahead must allow digits after answer letter: 'A 7 ngày' is valid. (?=[^\\s\\d]) is wrong, (?=\\S) is correct.",
+      "Questions without ':' or '?' terminator still have valid answers - use position of first answer candidate as boundary.",
+      "Text input parsing uses regex: ^(?:Câu\\s*(?:hỏi)?\\s+)?(\\d+)\\s*[\\.\\:\\)]\\s* to match number/question prefixes.",
+      "Answer marks in text parsing support formats: A., A), A:, A-, A (space)."
+    ],
+    "conventions": [
+      "check-exam components: AnswerSeparator, AnswerValidation, QuestionExtractor, QuizPreview, TwoColumnLayout, ComparisonView, etc.",
+      "check-exam hooks: usePdfProcessor, useQuestions, useComparison, useDeduplication, useExportFunctions, useProduct.",
+      "Question format uses '#' as delimiter between question text and each answer option.",
+      "TwoColumnLayout question rows have id='question-row-{index}' for scroll targeting."
     ]
   }
 }

@@ -24,6 +24,10 @@ import DeduplicationResults from "./components/DeduplicationResults";
 import ExportControls from "./components/ExportControls";
 import StepNavigation from "./components/StepNavigation";
 import AnswerValidation from "./components/AnswerValidation";
+import InputMethodSelector, {
+  type InputMethod,
+} from "./components/InputMethodSelector";
+import TextInput from "./components/TextInput";
 
 // Status message type
 type StatusType = "success" | "error" | "info" | "warning" | null;
@@ -82,9 +86,13 @@ export function CheckExamClient({ productId }: { productId: string }) {
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [statusType, setStatusType] = useState<StatusType>(null);
 
-  // Các bước trong quy trình
+  // State cho phương thức nhập
+  const [inputMethod, setInputMethod] = useState<InputMethod>("pdf");
+  const [rawTextInput, setRawTextInput] = useState("");
+
+  // Các bước trong quy trình (tên step 1 thay đổi theo inputMethod)
   const steps = [
-    { id: 1, name: "Tải lên PDF" },
+    { id: 1, name: inputMethod === "pdf" ? "Tải lên PDF" : "Nhập Text" },
     { id: 2, name: "Xem & chỉnh sửa" },
     { id: 3, name: "So sánh với đề cương" },
     { id: 4, name: "Loại bỏ trùng lặp" },
@@ -261,7 +269,7 @@ export function CheckExamClient({ productId }: { productId: string }) {
   }, [currentStep]);
 
   const handleGoForward = useCallback(() => {
-    if (currentStep === 1 && pdfFiles) {
+    if (currentStep === 1 && inputMethod === "pdf" && pdfFiles) {
       processPdfFiles().then((questions) => {
         if (questions && questions.length > 0) {
           setCurrentStep(2);
@@ -343,53 +351,90 @@ export function CheckExamClient({ productId }: { productId: string }) {
               currentStep={currentStep}
               canGoBack={currentStep > 1}
               canGoForward={
-                (currentStep === 1 && pdfFiles !== null) ||
+                (currentStep === 1 &&
+                  inputMethod === "pdf" &&
+                  pdfFiles !== null) ||
                 (currentStep === 2 && extractedQuestions.length > 0)
               }
               onGoBack={handleGoBack}
               onGoForward={handleGoForward}
             />
 
-            {pdfLibraryError && (
+            {inputMethod === "pdf" && pdfLibraryError && (
               <p className="mt-2 text-red-600 font-medium">{pdfLibraryError}</p>
             )}
-            {!pdfLoaded && !pdfLibraryError && (
+            {inputMethod === "pdf" && !pdfLoaded && !pdfLibraryError && (
               <p className="mt-2 text-yellow-600">
                 Đang tải thư viện PDF.js... Vui lòng đợi.
               </p>
             )}
           </header>
 
-          {/* Step 1 - Upload PDF */}
+          {/* Step 1 - Nhập câu hỏi (PDF hoặc Text) */}
           {currentStep === 1 && (
             <>
-              <FileUploader onFileChange={setPdfFiles} />
+              <InputMethodSelector
+                value={inputMethod}
+                onChange={(method) => {
+                  setInputMethod(method);
+                  setStatusMessage("");
+                  setStatusType(null);
+                }}
+                disabled={isLoading}
+              />
 
-              <div className="mt-6 flex justify-center">
-                <QuestionExtractor
-                  pdfFiles={pdfFiles}
-                  pdfLoaded={pdfLoaded}
+              {/* Mode PDF */}
+              {inputMethod === "pdf" && (
+                <>
+                  <FileUploader onFileChange={setPdfFiles} />
+                  <div className="mt-6 flex justify-center">
+                    <QuestionExtractor
+                      pdfFiles={pdfFiles}
+                      pdfLoaded={pdfLoaded}
+                      isLoading={isLoading}
+                      onProcessStart={() => {
+                        setIsLoading(true);
+                        resetUI();
+                      }}
+                      onProcessComplete={(extractedQuestionsResult) => {
+                        setIsLoading(false);
+                        setExtractedQuestions(extractedQuestionsResult);
+                        setStatusMessage(
+                          `Đã tìm thấy ${extractedQuestionsResult.length} câu hỏi. Bạn có thể chỉnh sửa chúng.`,
+                        );
+                        setStatusType("success");
+                        setCurrentStep(2);
+                      }}
+                      onError={(errorMessage) => {
+                        setIsLoading(false);
+                        setStatusMessage(`Lỗi: ${errorMessage}`);
+                        setStatusType("error");
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Mode Text */}
+              {inputMethod === "text" && (
+                <TextInput
                   isLoading={isLoading}
-                  onProcessStart={() => {
-                    setIsLoading(true);
-                    resetUI();
-                  }}
-                  onProcessComplete={(extractedQuestionsResult) => {
-                    setIsLoading(false);
-                    setExtractedQuestions(extractedQuestionsResult);
+                  value={rawTextInput}
+                  onTextChange={setRawTextInput}
+                  onProcessComplete={(questions) => {
+                    setExtractedQuestions(questions);
                     setStatusMessage(
-                      `Đã tìm thấy ${extractedQuestionsResult.length} câu hỏi. Bạn có thể chỉnh sửa chúng.`,
+                      `Đã phân tích ${questions.length} câu hỏi từ text. Đáp án đã được tách tự động.`,
                     );
                     setStatusType("success");
                     setCurrentStep(2);
                   }}
                   onError={(errorMessage) => {
-                    setIsLoading(false);
                     setStatusMessage(`Lỗi: ${errorMessage}`);
                     setStatusType("error");
                   }}
                 />
-              </div>
+              )}
             </>
           )}
 
