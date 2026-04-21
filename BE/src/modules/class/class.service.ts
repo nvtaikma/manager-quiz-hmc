@@ -45,6 +45,13 @@ class ClassService {
     return await Timetable.find({ ten_lop: className }).sort({ ngay_hoc: 1, buoi: 1 }).lean();
   }
 
+  async getExamSchedules() {
+    return await Timetable.find({ loai_gio: { $regex: /^thi\s+h.*t\s+m.*n/i } })
+      .sort({ ngay_hoc: 1, buoi: 1 })
+      .select("ten_lop ngay_hoc buoi gio_thi mon_hoc giang_vien dia_diem giang_duong ghi_chu noi_dung loai_gio")
+      .lean();
+  }
+
   async importTimetable(data: any[], targetClassName?: string) {
     if (!data || data.length === 0) return { message: "No data provided" };
 

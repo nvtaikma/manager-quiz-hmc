@@ -5,8 +5,12 @@ const router = express.Router();
 
 router.get("/", ClassController.getClasses);
 router.post("/bulk", ClassController.bulkCreateClasses);
+router.get("/exam-schedules", ClassController.getExamSchedules);
 router.get("/:className/timetable", ClassController.getTimetable);
 router.post("/timetable/import", ClassController.importTimetable);
-router.post("/:className/timetable/import", ClassController.importTimetableForClass);
+router.post(
+  "/:className/timetable/import",
+  ClassController.importTimetableForClass,
+);
 
 export default router;

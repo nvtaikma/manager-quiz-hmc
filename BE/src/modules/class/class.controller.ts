@@ -48,6 +48,18 @@ class ClassController {
     }
   }
 
+  async getExamSchedules(req: Request, res: Response) {
+    try {
+      const results = await ClassService.getExamSchedules();
+      res.status(200).json({
+        message: "Get exam schedules success",
+        data: results,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
   async importTimetable(req: Request, res: Response) {
     try {
       const data = req.body; // Expect array of timetable objects

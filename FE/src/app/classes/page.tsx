@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Search, Calendar } from "lucide-react";
+import { Plus, Search, Calendar, CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { API_BASE_URL, API_ENDPOINTS } from "@/contants/api";
 import AddClassModal from "@/components/classes/AddClassModal";
+import ExamScheduleModal from "@/components/classes/ExamScheduleModal";
 import Link from "next/link";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
 
 interface ClassItem {
   _id: string;
@@ -22,6 +24,23 @@ export default function ClassesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isExamScheduleOpen, setIsExamScheduleOpen] = useState(false);
+  const [upcomingExamsCount, setUpcomingExamsCount] = useState(0);
+
+  const fetchUpcomingExamsCount = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CLASSES}/exam-schedules`);
+      const data = await res.json();
+      if (data.data) {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const count = data.data.filter((item: { ngay_hoc: string }) => new Date(item.ngay_hoc) >= now).length;
+        setUpcomingExamsCount(count);
+      }
+    } catch (error) {
+      console.error("Failed to fetch exam schedules count", error);
+    }
+  };
 
   const fetchClasses = async () => {
     try {
@@ -40,6 +59,7 @@ export default function ClassesPage() {
 
   useEffect(() => {
     fetchClasses();
+    fetchUpcomingExamsCount();
   }, []);
 
   const filteredClasses = classes.filter((c) =>
@@ -53,9 +73,19 @@ export default function ClassesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Quản lý lớp học</h1>
           <p className="text-muted-foreground">Danh sách các lớp và thời khóa biểu.</p>
         </div>
-        <Button onClick={() => setIsAddModalOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Thêm lớp
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsExamScheduleOpen(true)} className="border-primary/20 hover:bg-primary/5 text-primary relative">
+            <CalendarCheck className="mr-2 h-4 w-4" /> Lịch thi tổng hợp
+            {upcomingExamsCount > 0 && (
+              <Badge variant="destructive" className="absolute -top-2 -right-2 px-1.5 min-w-5 h-5 flex items-center justify-center text-[10px]">
+                {upcomingExamsCount}
+              </Badge>
+            )}
+          </Button>
+          <Button onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Thêm lớp
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center space-x-2">
@@ -113,6 +143,11 @@ export default function ClassesPage() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={fetchClasses}
+      />
+
+      <ExamScheduleModal
+        isOpen={isExamScheduleOpen}
+        onClose={() => setIsExamScheduleOpen(false)}
       />
     </div>
   );
