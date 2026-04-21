@@ -1,6 +1,7 @@
 import { Schema } from "mongoose";
 import Question from "../models/question";
 import Exam from "../models/exam";
+import { invalidateExamCache } from "../util/cacheHelper";
 
 interface AnswerData {
   text: string;
@@ -93,6 +94,9 @@ class QuestionService {
         examId,
       });
 
+      // Invalidate cache: câu hỏi mới → dữ liệu exam thay đổi
+      void invalidateExamCache(String(examId));
+
       return newQuestion;
     } catch (error) {
       throw error;
@@ -132,6 +136,9 @@ class QuestionService {
         { new: true },
       );
 
+      // Invalidate cache: question.examId lấy từ findById phía trên
+      void invalidateExamCache(String(question.examId));
+
       return updatedQuestion;
     } catch (error) {
       throw error;
@@ -149,6 +156,9 @@ class QuestionService {
       }
 
       await Question.findByIdAndDelete(questionId);
+
+      // Invalidate cache: question.examId lấy từ findById phía trên
+      void invalidateExamCache(String(question.examId));
 
       return { message: "Xóa câu hỏi thành công" };
     } catch (error) {
@@ -202,6 +212,9 @@ class QuestionService {
       // Tạo nhiều câu hỏi cùng lúc
       const newQuestions = await Question.insertMany(questionsWithExamId);
 
+      // Invalidate cache: nhiều câu hỏi mới → dữ liệu exam thay đổi
+      void invalidateExamCache(String(examId));
+
       return newQuestions;
     } catch (error) {
       throw error;
@@ -217,7 +230,18 @@ class QuestionService {
         throw new Error("Danh sách ID câu hỏi không được rỗng");
       }
 
+      // Lấy examId từ câu hỏi đầu tiên trước khi xóa
+      // (giả định tất cả questionIds thuộc cùng 1 exam)
+      const sampleQuestion = await Question.findOne(
+        { _id: { $in: questionIds } },
+      ).select("examId").lean();
+
       const result = await Question.deleteMany({ _id: { $in: questionIds } });
+
+      // Invalidate cache nếu biết examId
+      if (sampleQuestion) {
+        void invalidateExamCache(String((sampleQuestion as any).examId));
+      }
 
       return {
         deletedCount: result.deletedCount,
