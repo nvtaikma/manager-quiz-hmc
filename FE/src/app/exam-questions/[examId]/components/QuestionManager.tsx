@@ -189,6 +189,11 @@ export function QuestionManager({ examId }: { examId: string }) {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
+  // Bulk delete functionality
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+
   // Text parser functionality
   const [textInput, setTextInput] = useState("");
   const [showTextParser, setShowTextParser] = useState(false);
@@ -278,7 +283,10 @@ export function QuestionManager({ examId }: { examId: string }) {
       });
       setQuestions(filtered);
     }
+    // Clear selection khi filter thay đổi
+    setSelectedIds(new Set());
   }, [debouncedSearchTerm, allQuestions]);
+
 
   // Cập nhật form khi có câu hỏi được chọn để sửa
   useEffect(() => {
@@ -448,6 +456,64 @@ export function QuestionManager({ examId }: { examId: string }) {
       setActionLoading(false);
     }
   };
+
+  // Xóa nhiều câu hỏi cùng lúc
+  const handleBulkDelete = async () => {
+    try {
+      setBulkDeleteLoading(true);
+      const response = await fetch(`${API_BASE_URL}/questions/bulk`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionIds: Array.from(selectedIds) }),
+      });
+
+      if (!response.ok) throw new Error("Không thể xóa câu hỏi");
+
+      const data = await response.json();
+      await fetchQuestions();
+      setSelectedIds(new Set());
+      setShowBulkDeleteDialog(false);
+      toast({
+        title: "Thành công",
+        description: `Đã xóa ${data.data.deletedCount} câu hỏi thành công.`,
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Lỗi không xác định";
+      console.error("Lỗi khi xóa hàng loạt:", errorMessage);
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa câu hỏi. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkDeleteLoading(false);
+    }
+  };
+
+  // Helpers cho bulk select
+  const isAllSelected =
+    questions.length > 0 && questions.every((q) => selectedIds.has(q._id));
+  const isIndeterminate =
+    questions.some((q) => selectedIds.has(q._id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(questions.map((q) => q._id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
 
   // Hiển thị độ khó dưới dạng text
   const getDifficultyText = (difficulty: string) => {
@@ -622,12 +688,18 @@ export function QuestionManager({ examId }: { examId: string }) {
 
       // Thêm các đáp án với định dạng A., B., C., D.
       const answerLabels = ["A", "B", "C", "D"];
+      // Regex kiểm tra xem text đã có tiền tố định danh (A., B., C., D.) chưa
+      const prefixRegex = /^[A-D]\.\s*/;
+
       question.answers
         .sort((a, b) => a.order - b.order)
         .forEach((answer, index) => {
-          if (answer.text.trim()) {
+          const rawText = answer.text.trim();
+          if (rawText) {
             const label = answerLabels[index] || `${index + 1}`;
-            formattedText += `${label}. ${answer.text.trim()}\n`;
+            // Strip tiền tố cũ nếu đã có (VD: "A. Nội dung" → "Nội dung")
+            const cleanText = rawText.replace(prefixRegex, "");
+            formattedText += `${label}. ${cleanText}\n`;
           }
         });
 
@@ -1277,6 +1349,19 @@ export function QuestionManager({ examId }: { examId: string }) {
 
               {/* Action buttons */}
               <div className="flex flex-col sm:flex-row gap-2 md:flex-shrink-0">
+                {/* Nút Xóa hàng loạt — chỉ hiện khi có item được chọn */}
+                {selectedIds.size > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    onClick={() => setShowBulkDeleteDialog(true)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Xóa {selectedIds.size} câu hỏi
+                  </Button>
+                )}
+
                 <Button
                   variant="outline"
                   onClick={openExcelDialog}
@@ -1617,6 +1702,19 @@ export function QuestionManager({ examId }: { examId: string }) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {/* Checkbox "Chọn tất cả" */}
+                  <TableHead className="w-10">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 cursor-pointer"
+                      checked={isAllSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = isIndeterminate;
+                      }}
+                      onChange={toggleSelectAll}
+                      aria-label="Chọn tất cả câu hỏi"
+                    />
+                  </TableHead>
                   <TableHead className="w-[calc(100%-80px)] md:w-auto">
                     Nội dung câu hỏi
                   </TableHead>
@@ -1656,7 +1754,20 @@ export function QuestionManager({ examId }: { examId: string }) {
                   </TableRow>
                 ) : (
                   questions.map((question) => (
-                    <TableRow key={question._id}>
+                    <TableRow
+                      key={question._id}
+                      className={selectedIds.has(question._id) ? "bg-muted/50" : ""}
+                    >
+                      {/* Checkbox chọn từng dòng */}
+                      <TableCell className="w-10">
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300 cursor-pointer"
+                          checked={selectedIds.has(question._id)}
+                          onChange={() => toggleSelect(question._id)}
+                          aria-label={`Chọn câu hỏi: ${question.text}`}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium pr-2">
                         <div className="max-w-none">
                           <div className="line-clamp-3 md:line-clamp-2">
@@ -1769,6 +1880,38 @@ export function QuestionManager({ examId }: { examId: string }) {
               </TableBody>
             </Table>
           </div>
+
+          {/* AlertDialog xác nhận xóa hàng loạt */}
+          <AlertDialog
+            open={showBulkDeleteDialog}
+            onOpenChange={setShowBulkDeleteDialog}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Xác nhận xóa câu hỏi</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Bạn có chắc chắn muốn xóa{" "}
+                  <strong>{selectedIds.size} câu hỏi</strong> đã chọn không? Hành
+                  động này <strong>không thể hoàn tác</strong>.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={bulkDeleteLoading}>
+                  Hủy
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleteLoading}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  {bulkDeleteLoading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2" />
+                  ) : null}
+                  Xóa {selectedIds.size} câu hỏi
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
 

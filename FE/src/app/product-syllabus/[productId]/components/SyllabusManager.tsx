@@ -59,6 +59,7 @@ import {
   Upload as UploadIcon,
   ImageIcon,
   ChevronUp,
+  Copy,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
@@ -392,6 +393,45 @@ export function SyllabusManager({ productId }: { productId: string }) {
     }
   };
 
+  // Sao chép nội dung câu hỏi vào clipboard
+  const copyQuestionToClipboard = async (question: Question) => {
+    try {
+      let questionText = question.text.trim();
+      if (!questionText.endsWith("?") && !questionText.endsWith(":")) {
+        questionText += ":";
+      }
+
+      let formattedText = questionText + "\n";
+      const answerLabels = ["A", "B", "C", "D"];
+      // Regex kiểm tra xem text đã có tiền tố định danh (A., B., C., D.) chưa
+      const prefixRegex = /^[A-D]\.\s*/;
+
+      [...question.answers]
+        .sort((a, b) => a.order - b.order)
+        .forEach((answer, index) => {
+          const rawText = answer.text.trim();
+          if (rawText) {
+            const label = answerLabels[index] || `${index + 1}`;
+            // Strip tiền tố cũ nếu đã có (VD: "A. Nội dung" → "Nội dung")
+            const cleanText = rawText.replace(prefixRegex, "");
+            formattedText += `${label}. ${cleanText}\n`;
+          }
+        });
+
+      await navigator.clipboard.writeText(formattedText.trim());
+      toast({
+        title: "Đã sao chép",
+        description: "Nội dung câu hỏi đã được copy vào clipboard.",
+      });
+    } catch {
+      toast({
+        title: "Lỗi",
+        description: "Không thể sao chép. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Chuyển đổi độ khó sang text hiển thị
   const getDifficultyText = (difficulty: string) => {
     switch (difficulty) {
@@ -590,6 +630,15 @@ export function SyllabusManager({ productId }: { productId: string }) {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end space-x-2">
+                        {/* Nút Sao chép vào clipboard */}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          title="Sao chép câu hỏi vào clipboard"
+                          onClick={() => copyQuestionToClipboard(question)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button

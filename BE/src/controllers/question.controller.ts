@@ -128,6 +128,28 @@ class QuestionController {
       return responseError(res, error.message, 400);
     }
   }
+
+  /**
+   * Xóa nhiều câu hỏi cùng lúc
+   */
+  async bulkDeleteQuestions(req: Request, res: Response) {
+    try {
+      const { questionIds } = req.body as { questionIds: string[] };
+
+      if (!Array.isArray(questionIds) || questionIds.length === 0) {
+        return responseError(res, "questionIds phải là mảng không rỗng", 400);
+      }
+
+      const result = await questionService.bulkDeleteQuestions(questionIds);
+
+      return res.status(200).json({
+        message: `Đã xóa ${result.deletedCount} câu hỏi thành công`,
+        data: result,
+      });
+    } catch (error: any) {
+      return responseError(res, error.message, 400);
+    }
+  }
 }
 
 export default new QuestionController();

@@ -4,6 +4,10 @@ import asyncHandler from "../util/asynHandler";
 
 const router = express.Router();
 
+// ⚠️ Route /bulk phải đặt TRƯỚC /:questionId để tránh conflict
+// Xóa nhiều câu hỏi cùng lúc
+router.delete("/bulk", asyncHandler(questionController.bulkDeleteQuestions));
+
 // Lấy thông tin câu hỏi theo ID
 router.get("/:questionId", asyncHandler(questionController.getQuestionById));
 

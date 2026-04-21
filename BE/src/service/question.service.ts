@@ -15,6 +15,12 @@ interface QuestionData {
   difficulty?: string;
 }
 
+interface BulkDeleteResult {
+  deletedCount: number;
+  requestedCount: number;
+}
+
+
 class QuestionService {
   /**
    * Lấy danh sách câu hỏi theo bài kiểm tra
@@ -61,7 +67,7 @@ class QuestionService {
    */
   async createQuestion(
     examId: Schema.Types.ObjectId | string,
-    questionData: QuestionData
+    questionData: QuestionData,
   ) {
     try {
       // Kiểm tra bài kiểm tra tồn tại
@@ -76,7 +82,7 @@ class QuestionService {
       }
 
       const hasCorrectAnswer = questionData.answers.some(
-        (answer) => answer.isCorrect
+        (answer) => answer.isCorrect,
       );
       if (!hasCorrectAnswer) {
         throw new Error("Phải có ít nhất 1 câu trả lời đúng");
@@ -98,7 +104,7 @@ class QuestionService {
    */
   async updateQuestion(
     questionId: Schema.Types.ObjectId | string,
-    questionData: Partial<QuestionData>
+    questionData: Partial<QuestionData>,
   ) {
     try {
       const question = await Question.findById(questionId);
@@ -113,7 +119,7 @@ class QuestionService {
         }
 
         const hasCorrectAnswer = questionData.answers.some(
-          (answer) => answer.isCorrect
+          (answer) => answer.isCorrect,
         );
         if (!hasCorrectAnswer) {
           throw new Error("Phải có ít nhất 1 câu trả lời đúng");
@@ -123,7 +129,7 @@ class QuestionService {
       const updatedQuestion = await Question.findByIdAndUpdate(
         questionId,
         questionData,
-        { new: true }
+        { new: true },
       );
 
       return updatedQuestion;
@@ -155,7 +161,7 @@ class QuestionService {
    */
   async createMultipleQuestions(
     examId: Schema.Types.ObjectId | string,
-    questionsData: QuestionData[]
+    questionsData: QuestionData[],
   ) {
     try {
       // Kiểm tra bài kiểm tra tồn tại
@@ -180,7 +186,7 @@ class QuestionService {
         }
 
         const hasCorrectAnswer = questionData.answers.some(
-          (answer) => answer.isCorrect
+          (answer) => answer.isCorrect,
         );
         if (!hasCorrectAnswer) {
           throw new Error("Mỗi câu hỏi phải có ít nhất 1 câu trả lời đúng");
@@ -197,6 +203,26 @@ class QuestionService {
       const newQuestions = await Question.insertMany(questionsWithExamId);
 
       return newQuestions;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Xóa nhiều câu hỏi cùng lúc
+   */
+  async bulkDeleteQuestions(questionIds: string[]): Promise<BulkDeleteResult> {
+    try {
+      if (!questionIds || questionIds.length === 0) {
+        throw new Error("Danh sách ID câu hỏi không được rỗng");
+      }
+
+      const result = await Question.deleteMany({ _id: { $in: questionIds } });
+
+      return {
+        deletedCount: result.deletedCount,
+        requestedCount: questionIds.length,
+      };
     } catch (error) {
       throw error;
     }
