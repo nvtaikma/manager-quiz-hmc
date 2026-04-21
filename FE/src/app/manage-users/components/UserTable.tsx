@@ -32,7 +32,8 @@ import {
   Clock,
   Calendar,
   BookOpen,
-  BookMarked
+  BookMarked,
+  Activity,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/contants/api";
@@ -42,6 +43,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import UserSessionModal from "./UserSessionModal";
 import UserCoursesModal from "./UserCoursesModal";
+import UserActivityModal from "./UserActivityModal";
 
 interface User {
   _id: string;
@@ -142,6 +144,10 @@ export function UserTable({
   // User Courses state
   const [showCoursesModal, setShowCoursesModal] = React.useState(false);
   const [selectedUserForCourses, setSelectedUserForCourses] = React.useState<User | null>(null);
+
+  // User Activity state
+  const [showActivityModal, setShowActivityModal] = React.useState(false);
+  const [selectedUserForActivity, setSelectedUserForActivity] = React.useState<User | null>(null);
 
   // Helper function to format date
   const formatDate = (dateString: string | null | undefined) => {
@@ -373,6 +379,17 @@ export function UserTable({
                   >
                     <BookOpen className="h-4 w-4" />
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setSelectedUserForActivity(user);
+                      setShowActivityModal(true);
+                    }}
+                    title="Xem lịch sử hoạt động"
+                  >
+                    <Activity className="h-4 w-4" />
+                  </Button>
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button
@@ -433,6 +450,13 @@ export function UserTable({
         onClose={() => setShowCoursesModal(false)}
         userEmail={selectedUserForCourses?.email || null}
         userName={selectedUserForCourses?.name || ""}
+      />
+
+      <UserActivityModal
+        isOpen={showActivityModal}
+        onClose={() => setShowActivityModal(false)}
+        customerId={selectedUserForActivity?._id || null}
+        userName={selectedUserForActivity?.name || ""}
       />
 
       {/* Exam History Modal */}

@@ -12,6 +12,7 @@ const compression_1 = __importDefault(require("compression"));
 const errorhandler_1 = require("./util/errorhandler");
 const routes_1 = __importDefault(require("./routes"));
 const mongodb_1 = __importDefault(require("./dbs/mongodb"));
+const activityLogger_job_1 = require("./jobs/activityLogger.job");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
@@ -39,5 +40,7 @@ app.use(errorhandler_1.errorMiddleware);
 (0, mongodb_1.default)().then(() => {
     app.listen(port, () => {
         console.log(`[server]: Server is running at http://localhost:${port}`);
+        // Khởi động cron job sau khi server + DB sẵn sàng
+        (0, activityLogger_job_1.startActivityLoggerJob)();
     });
 });

@@ -7,6 +7,7 @@ import compression from "compression";
 import { errorMiddleware } from "./util/errorhandler";
 import router from "./routes";
 import connectDB from "./dbs/mongodb";
+import { startActivityLoggerJob } from "./jobs/activityLogger.job";
 
 dotenv.config();
 
@@ -41,5 +42,7 @@ app.use(errorMiddleware);
 connectDB().then(() => {
   app.listen(port, () => {
     console.log(`[server]: Server is running at http://localhost:${port}`);
+    // Khởi động cron job sau khi server + DB sẵn sàng
+    startActivityLoggerJob();
   });
 });

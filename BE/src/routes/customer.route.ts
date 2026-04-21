@@ -2,6 +2,7 @@ import express from "express";
 import ProductController from "../controllers/product.controller";
 import asyncHandler from "../util/asynHandler";
 import CustomerController from "../controllers/customer.controller";
+import UserActivityController from "../controllers/userActivity.controller";
 
 const router = express.Router();
 
@@ -29,4 +30,17 @@ router.get(
 router.get("/:id/session", asyncHandler(CustomerController.getCustomerSession));
 
 router.get("/search", asyncHandler(CustomerController.searchCustomer));
+
+// Activity logs — raw data
+router.get(
+  "/:id/activities",
+  asyncHandler(UserActivityController.getActivities)
+);
+
+// Activity logs — session grouped (với startTime, endTime, duration, status)
+router.get(
+  "/:id/sessions",
+  asyncHandler(UserActivityController.getSessions)
+);
+
 export default router;
