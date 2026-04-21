@@ -1,4 +1,3 @@
-
 import Redis from "ioredis";
 import dotenv from "dotenv";
 
@@ -17,7 +16,7 @@ const redis = new Redis({
 });
 
 redis.on("connect", () => {
-  console.log("ip", process.env.REDIS_HOST)
+  console.log("ip", process.env.REDIS_HOST);
   console.log("✅ Đã kết nối Redis thành công");
 });
 

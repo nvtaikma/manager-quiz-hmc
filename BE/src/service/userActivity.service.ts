@@ -33,7 +33,6 @@ function buildSession(
       ? null
       : new Date(lastTimestamp.getTime() + OFFLINE_DELAY_MS);
 
-  // Nếu online → tính duration đến thời điểm hiện tại
   const durationMs = (endTime ?? new Date()).getTime() - startTime.getTime();
 
   return {
@@ -51,14 +50,9 @@ function buildSession(
  *
  * Logic:
  * - Sort timestamps tăng dần
- * - Nếu gap giữa 2 timestamps liên tiếp <= SESSION_THRESHOLD_MS (3 phút) → cùng phiên
- * - Nếu gap > 3 phút → đóng phiên hiện tại, bắt đầu phiên mới
- * - Phiên cuối: kiểm tra Redis để xác định online/offline
- *
- * Ví dụ:
- *   Input:  [10:36, 10:38, 10:40, 10:44, 10:46, 11:10] (giờ VN)
- *   Gap:     2min   2min   4min!  2min   24min!
- *   Output: Session1 (10:36→10:42) | Session2 (10:44→10:48) | Session3 (11:10→?)
+ * - Gap <= 3 phút → cùng phiên
+ * - Gap > 3 phút → đóng phiên cũ, bắt đầu phiên mới
+ * - Phiên cuối: kiểm tra Redis xác định online/offline
  */
 function groupIntoSessions(
   activities: Date[],
@@ -66,7 +60,6 @@ function groupIntoSessions(
 ): ActivitySession[] {
   if (activities.length === 0) return [];
 
-  // Đảm bảo sort tăng dần (đề phòng $push MongoDB không theo thứ tự)
   const sorted = [...activities].sort((a, b) => a.getTime() - b.getTime());
   const sessions: ActivitySession[] = [];
   let currentRaw: Date[] = [sorted[0]];
@@ -75,16 +68,14 @@ function groupIntoSessions(
     const gap = sorted[i].getTime() - sorted[i - 1].getTime();
 
     if (gap <= SESSION_THRESHOLD_MS) {
-      // Cùng phiên → tiếp tục append
       currentRaw.push(sorted[i]);
     } else {
-      // Gap quá lớn → đóng phiên hiện tại, bắt đầu phiên mới
       sessions.push(buildSession(currentRaw, "offline"));
       currentRaw = [sorted[i]];
     }
   }
 
-  // Xử lý session cuối cùng: kiểm tra xem user còn online không
+  // Session cuối: online nếu user vẫn đang online VÀ heartbeat cuối còn gần
   const lastTs = currentRaw[currentRaw.length - 1];
   const timeSinceLast = Date.now() - lastTs.getTime();
   const isStillActive =
@@ -101,10 +92,8 @@ function groupIntoSessions(
 
 class UserActivityService {
   /**
-   * Ghi 1 heartbeat cho userId vào MongoDB.
-   *
-   * Pattern: findOneAndUpdate + upsert + $push
-   * → Chỉ 1 query duy nhất, không cần read-before-write.
+   * Ghi 1 heartbeat cho userId vào MongoDB (dùng cho API endpoint lẻ).
+   * Cron job dùng bulkWrite trực tiếp trong activityLogger.job.ts.
    */
   async logHeartbeat(userId: string): Promise<void> {
     const now = new Date();
@@ -121,48 +110,38 @@ class UserActivityService {
   }
 
   /**
-   * Lấy raw documents — mỗi doc = 1 ngày, chứa mảng activities thô.
-   * Dùng nội bộ bởi getSessionsByUserId.
+   * Query raw activity documents thẳng từ MongoDB (không cache).
    */
-  async getActivitiesByUserId(
-    userId: string,
-    days: number = 7
-  ) {
+  private async getRawActivities(userId: string, days: number) {
     const safeDays = Math.min(Math.max(days, 1), 30);
     const startDate = normalizeToVietnamDay(
       new Date(Date.now() - safeDays * 24 * 60 * 60 * 1000)
     );
 
-    return UserActivity.find({
-      userId,
-      date: { $gte: startDate },
-    })
-      .sort({ date: -1 }) // Mới nhất trước — index=0 là ngày hôm nay
+    return UserActivity.find({ userId, date: { $gte: startDate } })
+      .select("userId date activities -_id")
+      .sort({ date: -1 })
       .lean();
   }
 
   /**
    * Lấy lịch sử hoạt động đã gom nhóm theo phiên (Session Grouping).
+   * Query trực tiếp MongoDB mỗi lần — không cache.
    *
-   * Trả về mảng DailyActivitySummary, mỗi phần tử = 1 ngày,
-   * bên trong là các sessions đã xác định startTime, endTime, duration.
-   *
-   * @param userId  Auth User ID (khớp với Redis key online:user:{userId})
-   * @param days    Số ngày muốn lấy (mặc định 7, tối đa 30)
+   * @param userId  Auth User ID
+   * @param days    Số ngày (mặc định 7, tối đa 30)
    */
   async getSessionsByUserId(
     userId: string,
     days: number = 7
   ): Promise<DailyActivitySummary[]> {
-    const docs = await this.getActivitiesByUserId(userId, days);
-
+    const docs = await this.getRawActivities(userId, days);
     if (docs.length === 0) return [];
 
     // Kiểm tra user có đang online không (từ Redis)
     const isOnline = (await redis.exists(`online:user:${userId}`)) === 1;
 
     return docs.map((doc, index) => {
-      // Chỉ doc đầu tiên (ngày mới nhất) mới có thể đang online
       const isLatestDoc = index === 0;
       const sessions = groupIntoSessions(
         doc.activities,
@@ -174,7 +153,6 @@ class UserActivityService {
         0
       );
 
-      // Tạo date string theo giờ VN
       const vnDate = new Date(doc.date.getTime() + 7 * 60 * 60 * 1000);
       const dateLabel = new Intl.DateTimeFormat("vi-VN", {
         weekday: "short",
@@ -184,13 +162,20 @@ class UserActivityService {
       }).format(doc.date);
 
       return {
-        date: vnDate.toISOString().slice(0, 10), // "2026-04-21"
-        dateLabel,                                 // "Th 2, 21/04"
+        date: vnDate.toISOString().slice(0, 10),
+        dateLabel,
         sessions,
         totalActiveMinutes,
         sessionCount: sessions.length,
       };
     });
+  }
+
+  /**
+   * @deprecated Prefer getSessionsByUserId.
+   */
+  async getActivitiesByUserId(userId: string, days: number = 7) {
+    return this.getRawActivities(userId, days);
   }
 }
 

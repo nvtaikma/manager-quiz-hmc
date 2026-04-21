@@ -25,8 +25,10 @@ const userActivitySchema = new Schema<IUserActivity>(
 // Compound unique index: mỗi user chỉ có 1 document/ngày → dùng cho upsert
 userActivitySchema.index({ userId: 1, date: 1 }, { unique: true });
 
-// TTL index: MongoDB tự xóa document sau 7 ngày kể từ trường `date`
-// 604800 giây = 7 ngày
-userActivitySchema.index({ date: 1 }, { expireAfterSeconds: 604800 });
+// TTL index: MongoDB tự xóa document sau 30 ngày kể từ trường `date`
+// 2592000 giây = 30 ngày (nâng từ 7 ngày để admin xem lịch sử lâu hơn)
+// NOTE: Nếu thay đổi TTL trên DB đã có index, cần chạy:
+//   db.useractivities.dropIndex("date_1") rồi để Mongoose tạo lại
+userActivitySchema.index({ date: 1 }, { expireAfterSeconds: 2592000 });
 
 export default mongoose.model<IUserActivity>("UserActivity", userActivitySchema);
