@@ -26,6 +26,19 @@ export default function ClassesPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isExamScheduleOpen, setIsExamScheduleOpen] = useState(false);
   const [upcomingExamsCount, setUpcomingExamsCount] = useState(0);
+  const [totalTimetables, setTotalTimetables] = useState<number | null>(null);
+
+  const fetchTotalTimetables = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CLASSES}/timetable/count`);
+      const data = await res.json();
+      if (data.data !== undefined) {
+        setTotalTimetables(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch total timetables count", error);
+    }
+  };
 
   const fetchUpcomingExamsCount = async () => {
     try {
@@ -60,6 +73,7 @@ export default function ClassesPage() {
   useEffect(() => {
     fetchClasses();
     fetchUpcomingExamsCount();
+    fetchTotalTimetables();
   }, []);
 
   const filteredClasses = classes.filter((c) =>
@@ -71,7 +85,16 @@ export default function ClassesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Quản lý lớp học</h1>
-          <p className="text-muted-foreground">Danh sách các lớp và thời khóa biểu.</p>
+          <p className="text-muted-foreground flex flex-wrap items-center gap-2 mt-1">
+            Danh sách các lớp và thời khóa biểu.
+            {totalTimetables !== null ? (
+              <Badge variant="secondary" className="font-normal text-xs px-2 py-0.5">
+                Tổng: {totalTimetables.toLocaleString()} bản ghi thời khóa biểu
+              </Badge>
+            ) : (
+              <span className="h-5 w-32 bg-muted animate-pulse rounded-full inline-block"></span>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setIsExamScheduleOpen(true)} className="border-primary/20 hover:bg-primary/5 text-primary relative">

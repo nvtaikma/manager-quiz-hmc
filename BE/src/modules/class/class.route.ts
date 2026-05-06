@@ -6,6 +6,7 @@ const router = express.Router();
 router.get("/", ClassController.getClasses);
 router.post("/bulk", ClassController.bulkCreateClasses);
 router.get("/exam-schedules", ClassController.getExamSchedules);
+router.get("/timetable/count", ClassController.getTotalTimetables);
 router.get("/:className/timetable", ClassController.getTimetable);
 router.post("/timetable/import", ClassController.importTimetable);
 router.post(

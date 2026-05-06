@@ -48,6 +48,18 @@ class ClassController {
     }
   }
 
+  async getTotalTimetables(req: Request, res: Response) {
+    try {
+      const total = await ClassService.getTotalTimetables();
+      res.status(200).json({
+        message: "Get total timetables success",
+        data: total,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
   async getExamSchedules(req: Request, res: Response) {
     try {
       const results = await ClassService.getExamSchedules();

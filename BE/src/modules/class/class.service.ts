@@ -45,6 +45,10 @@ class ClassService {
     return await Timetable.find({ ten_lop: className }).sort({ ngay_hoc: 1, buoi: 1 }).lean();
   }
 
+  async getTotalTimetables() {
+    return await Timetable.countDocuments();
+  }
+
   async getExamSchedules() {
     return await Timetable.find({ loai_gio: { $regex: /^thi\s+h.*t\s+m.*n/i } })
       .sort({ ngay_hoc: 1, buoi: 1 })
