@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "decisions": [
+    {
+      "id": "D001",
+      "decision": "Server-side Heartbeat Logging via Cron",
+      "reason": "Allows tracking users from external MedExam apps without modifying their frontend code.",
+      "context": "Activity logging design",
+      "date": "2026-04-21"
+    },
+    {
+      "id": "D002",
+      "decision": "3-Minute Session Grouping Threshold",
+      "reason": "Balances precision with reliability. Cron interval is 2m, so 3m handles jitter.",
+      "context": "Grouping algorithm",
+      "date": "2026-04-21"
+    },
+    {
+      "id": "D003",
+      "decision": "Customer-to-AuthUser email mapping",
+      "reason": "Frontend only knows Customer ID. Backend maps to Auth User via email for cross-app consistency.",
+      "context": "ID Resolution",
+      "date": "2026-04-21"
+    }
+  ]
+}

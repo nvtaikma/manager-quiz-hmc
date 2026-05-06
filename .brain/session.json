@@ -1,71 +1,38 @@
 {
-  "updated_at": "2026-03-13T11:45:00+07:00",
+  "session_id": "session_20260421_1757",
+  "session_started_at": "2026-04-21T16:00:00Z",
+  "updated_at": "2026-04-21T17:57:00Z",
   "working_on": {
-    "feature": "Check Exam - Input Flexibility & UI Polish",
-    "task": "Completed Text Input option and UI improvements",
+    "feature": "User Activity Logs",
+    "task": "Commit and finalize session grouping",
     "status": "completed",
-    "notes": "Added 'Paste Text' option, improved FileUploader, and added multi-format text parsing logic."
+    "files": [
+      "BE/src/service/userActivity.service.ts",
+      "BE/src/controllers/userActivity.controller.ts",
+      "FE/src/app/manage-users/components/UserActivityModal.tsx"
+    ],
+    "blockers": [],
+    "notes": "Feature is fully implemented with automated cron logging and frontend visualization."
   },
   "pending_tasks": [
-    {
-      "task": "Test with more diverse PDF files to verify edge cases",
-      "priority": "medium",
-      "notes": "Especially PDFs with unusual fonts or complex Vietnamese text"
-    },
-    {
-      "task": "Consider refactoring AnswerSeparator + AnswerValidation logic into a shared hook",
-      "priority": "low",
-      "notes": "Validation logic is duplicated between AnswerValidation component and CheckExamClient showComparisonView"
-    }
+    "Monitor MongoDB storage growth for Activity logs",
+    "Consider Redis Buffer (ZADD) for high-scale logging"
   ],
   "recent_changes": [
-    {
-      "timestamp": "2026-03-13T11:30:00+07:00",
-      "type": "feature",
-      "description": "Implemented 'Paste Text' input method for Check Exam with real-time question counting",
-      "files": [
-        "FE/src/app/check-exam/[productId]/components/TextInput.tsx",
-        "FE/src/app/check-exam/[productId]/components/InputMethodSelector.tsx",
-        "FE/src/app/check-exam/[productId]/CheckExamClient.tsx"
-      ]
-    },
-    {
-      "timestamp": "2026-03-13T11:40:00+07:00",
-      "type": "ui",
-      "description": "Improved FileUploader UI to show selected file names, sizes, and a clear/success state",
-      "files": [
-        "FE/src/app/check-exam/[productId]/components/FileUploader.tsx"
-      ]
-    },
-    {
-      "timestamp": "2026-03-13T11:20:00+07:00",
-      "type": "bugfix",
-      "description": "Enhanced text parsing regex to support 'Câu hỏi X:' format and various answer delimiters",
-      "files": [
-        "FE/src/app/check-exam/[productId]/components/TextInput.tsx"
-      ]
-    }
+    "Implemented session grouping algorithm (3m threshold)",
+    "Created Activity visualization with Recharts",
+    "Added automated cron job for heartbeat logging",
+    "Implemented cache invalidation for course updates",
+    "Refactored UserActivityModal to use SessionCard components"
   ],
   "errors_encountered": [
-    {
-      "error": "FileUploader didn't show uploaded file names",
-      "solution": "Added state to track selected files and mapped them in the UI with a clear button.",
-      "resolved": true
-    },
-    {
-      "error": "Text parsing regex didn't match 'Câu hỏi' variant",
-      "solution": "Updated regex to handle optional 'hỏi' word: ^(?:Câu\\s*(?:hỏi)?\\s+)?",
-      "resolved": true
-    }
+    "TypeScript any type in tooltips",
+    "PowerShell syntax errors with &&"
   ],
   "decisions_made": [
-    {
-      "decision": "Lifting raw text state to parent",
-      "reason": "Allows state persistence when user navigates back to step 1 (PDF/Text selection)."
-    },
-    {
-      "decision": "Auto-separating answers in text mode",
-      "reason": "Text input formats are predictable enough to insert # markers immediately during parsing."
-    }
-  ]
+    "Server-side cron instead of client heartbeats",
+    "Group by 3-minute gap threshold",
+    "Map Customer ID to Auth User ID via email"
+  ],
+  "workflows_used": ["/plan", "/code", "/save-brain"]
 }
