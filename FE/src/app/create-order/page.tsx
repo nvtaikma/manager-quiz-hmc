@@ -37,6 +37,8 @@ const customerSchema = z.object({
   }),
   email: z.string().email({
     message: "Email không hợp lệ.",
+  }).refine((val) => val.endsWith('@gmail.com') || val.endsWith('@icloud.com'), {
+    message: "Email phải là @gmail.com hoặc @icloud.com",
   }),
 });
 
