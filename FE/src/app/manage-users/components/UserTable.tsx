@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -192,7 +193,7 @@ export function UserTable({
       setExamHistoryLoading(true);
       // lấy user _id từ email
 
-      const responseUser = await fetch(`${API_BASE_URL}/users/${email}`);
+      const responseUser = await fetchApi(`/users/${email}`);
       if (!responseUser.ok) {
         throw new Error("Không thể tải dữ liệu người dùng");
       }
@@ -200,7 +201,7 @@ export function UserTable({
 
       const userId = dataUser?.data?._id;
 
-      const response = await fetch(`${API_BASE_URL}/exam-histories/${userId}`);
+      const response = await fetchApi(`/exam-histories/${userId}`);
       if (!response.ok) {
         throw new Error("Không thể tải dữ liệu lịch sử thi");
       }
@@ -225,7 +226,7 @@ export function UserTable({
     try {
       setPracticeHistoryLoading(true);
       // lấy user _id từ email
-      const responseUser = await fetch(`${API_BASE_URL}/users/${email}`);
+      const responseUser = await fetchApi(`/users/${email}`);
       if (!responseUser.ok) {
         throw new Error("Không thể tải dữ liệu người dùng");
       }
@@ -233,8 +234,7 @@ export function UserTable({
 
       const userId = dataUser?.data?._id;
 
-      const response = await fetch(
-        `${API_BASE_URL}/PracticeExamHistory/${userId}`
+      const response = await fetchApi(`/PracticeExamHistory/${userId}`
       );
       if (!response.ok) {
         throw new Error("Không thể tải dữ liệu lịch sử thi thử");

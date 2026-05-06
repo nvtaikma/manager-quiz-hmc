@@ -5,7 +5,8 @@ import { Plus, Search, Calendar, CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { API_BASE_URL, API_ENDPOINTS } from "@/contants/api";
+import { API_ENDPOINTS } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import AddClassModal from "@/components/classes/AddClassModal";
 import ExamScheduleModal from "@/components/classes/ExamScheduleModal";
 import Link from "next/link";
@@ -30,7 +31,7 @@ export default function ClassesPage() {
 
   const fetchTotalTimetables = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CLASSES}/timetable/count`);
+      const res = await fetchApi(`${API_ENDPOINTS.CLASSES}/timetable/count`);
       const data = await res.json();
       if (data.data !== undefined) {
         setTotalTimetables(data.data);
@@ -42,7 +43,7 @@ export default function ClassesPage() {
 
   const fetchUpcomingExamsCount = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CLASSES}/exam-schedules`);
+      const res = await fetchApi(`${API_ENDPOINTS.CLASSES}/exam-schedules`);
       const data = await res.json();
       if (data.data) {
         const now = new Date();
@@ -58,7 +59,7 @@ export default function ClassesPage() {
   const fetchClasses = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CLASSES}`);
+      const res = await fetchApi(`${API_ENDPOINTS.CLASSES}`);
       const data = await res.json();
       if (data.data) {
         setClasses(data.data);

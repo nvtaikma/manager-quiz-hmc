@@ -68,6 +68,7 @@ import { Badge } from "@/components/ui/badge";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRef } from "react";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import { handleImageUpload } from "@/lib/upload";
 
 interface Answer {
@@ -161,7 +162,7 @@ export function SyllabusManager({ productId }: { productId: string }) {
   // Hàm lấy thông tin sản phẩm
   const fetchProduct = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/products/${productId}`);
+      const response = await fetchApi(`/products/${productId}`);
       if (!response.ok) {
         throw new Error("Không thể tải thông tin sản phẩm");
       }
@@ -182,8 +183,8 @@ export function SyllabusManager({ productId }: { productId: string }) {
   // Hàm lấy danh sách đề thi
   const fetchExams = useCallback(async () => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/products/${productId}/exams`
+      const response = await fetchApi(
+        `/products/${productId}/exams`
       );
       if (!response.ok) {
         throw new Error("Không thể tải danh sách đề thi");
@@ -206,8 +207,8 @@ export function SyllabusManager({ productId }: { productId: string }) {
   const fetchAllQuestions = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(
-        `${API_BASE_URL}/products/${productId}/exams`
+      const response = await fetchApi(
+        `/products/${productId}/exams`
       );
       if (!response.ok) {
         throw new Error("Không thể tải danh sách đề thi");
@@ -225,8 +226,8 @@ export function SyllabusManager({ productId }: { productId: string }) {
       const allQuestions: Question[] = [];
       for (const exam of examList) {
         try {
-          const questionResponse = await fetch(
-            `${API_BASE_URL}/exams/${exam._id}/questions`
+          const questionResponse = await fetchApi(
+            `/exams/${exam._id}/questions`
           );
           if (questionResponse.ok) {
             const questionData = await questionResponse.json();
@@ -330,7 +331,7 @@ export function SyllabusManager({ productId }: { productId: string }) {
   ) => {
     try {
       setActionLoading(true);
-      const response = await fetch(`${API_BASE_URL}/questions/${questionId}`, {
+      const response = await fetchApi(`/questions/${questionId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -366,7 +367,7 @@ export function SyllabusManager({ productId }: { productId: string }) {
   const deleteQuestion = async (questionId: string) => {
     try {
       setActionLoading(true);
-      const response = await fetch(`${API_BASE_URL}/questions/${questionId}`, {
+      const response = await fetchApi(`/questions/${questionId}`, {
         method: "DELETE",
       });
 

@@ -53,6 +53,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { API_URLS } from "@/contants/api";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
+import { useAuth } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const navItems = [
   {
@@ -123,68 +125,19 @@ export default function Sidebars({ content }: { content: React.ReactNode }) {
     email: "admin@example.com",
   });
 
-  // Đọc thông tin user từ cookie khi component được mount
-  React.useEffect(() => {
-    const cookies = document.cookie.split(";");
-    const userCookie = cookies.find((cookie) =>
-      cookie.trim().startsWith("user=")
-    );
-
-    if (userCookie) {
-      try {
-        const userValue = userCookie.split("=")[1].trim();
-        const user = JSON.parse(decodeURIComponent(userValue));
-        setUserInfo({
-          username: user.username || "Admin",
-          email: user.email || "admin@example.com",
-        });
-      } catch (error) {
-        console.error("Không thể parse cookie user:", error);
-      }
-    }
-  }, []);
-
-  const handleLogout = async () => {
-    try {
-      // Gọi API để đăng xuất
-      const response = await fetch(API_URLS.AUTH_LOGOUT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Hiển thị thông báo thành công
-        toast({
-          title: "Đăng xuất thành công",
-          description: "Hẹn gặp lại!",
-        });
-
-        // Chuyển hướng về trang đăng nhập
-        router.push("/login");
-      } else {
-        throw new Error(data.message || "Đăng xuất thất bại");
-      }
-    } catch (error) {
-      console.error("Lỗi đăng xuất:", error);
-
-      // Fallback: xóa cookie trực tiếp nếu API thất bại
-      document.cookie = "user=; path=/; max-age=0";
-
-      toast({
-        title: "Đăng xuất thành công",
-        description: "Hẹn gặp lại!",
-      });
-
-      router.push("/login");
-    }
+  const { user, logout } = useAuth();
+  
+  const handleLogout = () => {
+    logout();
   };
 
+  if (pathname === "/login") {
+    return <main className="flex-1 w-full">{content}</main>;
+  }
+
   return (
-    <SidebarProvider>
+    <ProtectedRoute>
+      <SidebarProvider>
       <Sidebar className="border-r border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <SidebarHeader className="px-4 py-6">
           <SidebarMenu>
@@ -281,15 +234,15 @@ export default function Sidebars({ content }: { content: React.ReactNode }) {
                 <div className="flex items-center gap-3 px-2 py-3 rounded-lg hover:bg-accent cursor-pointer">
                   <Avatar className="h-9 w-9 border border-border">
                     <AvatarFallback>
-                      {userInfo.username.charAt(0).toUpperCase()}
+                      {user?.email?.charAt(0).toUpperCase() || "A"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col truncate">
                     <span className="text-sm font-medium">
-                      {userInfo.username}
+                      {user?.email?.split('@')[0] || userInfo.username}
                     </span>
                     <span className="text-xs text-muted-foreground truncate">
-                      {userInfo.email}
+                      {user?.email || userInfo.email}
                     </span>
                   </div>
                   <DropdownMenu>
@@ -364,5 +317,6 @@ export default function Sidebars({ content }: { content: React.ReactNode }) {
         onOpenChange={setChangePasswordOpen}
       />
     </SidebarProvider>
+    </ProtectedRoute>
   );
 }

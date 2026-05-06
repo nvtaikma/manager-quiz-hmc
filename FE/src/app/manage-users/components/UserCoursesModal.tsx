@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { BookMarked } from "lucide-react";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 
 interface CourseData {
   _id: string;
@@ -48,7 +49,7 @@ export default function UserCoursesModal({
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/students/email/${userEmail}/courses`);
+      const res = await fetchApi(`/students/email/${userEmail}/courses`);
       if (!res.ok) throw new Error("Lỗi fetch");
       const data = await res.json();
       setCourses(data.data || []);

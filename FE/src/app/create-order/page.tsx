@@ -30,6 +30,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDebounce } from "@/hooks/useDebounce";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 
 const customerSchema = z.object({
   name: z.string().min(2, {
@@ -147,11 +148,8 @@ export default function CreateOrder() {
   async function onCustomerSubmit(values: z.infer<typeof customerSchema>) {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/customers`, {
+      const response = await fetchApi(`/customers`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(values),
       });
 
@@ -178,7 +176,7 @@ export default function CreateOrder() {
   async function fetchProducts() {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/products/all/full`);
+      const response = await fetchApi(`/products/all/full`);
       if (!response.ok) {
         throw new Error("Lỗi khi tải danh sách sản phẩm");
       }
@@ -229,11 +227,8 @@ export default function CreateOrder() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/orders`, {
+      const response = await fetchApi(`/orders`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           customerId,
           items: selectedProducts,

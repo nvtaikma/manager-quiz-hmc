@@ -1,84 +1,67 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Package } from "lucide-react";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useToast } from "@/components/ui/use-toast";
-import { API_URLS } from "@/contants/api";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { Package } from "lucide-react";
+
+const loginSchema = z.object({
+  email: z
+    .string()
+    .email({ message: "Email không hợp lệ" })
+    .refine((val) => val.endsWith("@gmail.com") || val.endsWith("@icloud.com"), {
+      message: "Email phải có đuôi @gmail.com hoặc @icloud.com",
+    }),
+  password: z.string().min(6, { message: "Mật khẩu phải có ít nhất 6 ký tự" }),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { login } = useAuth();
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
+  const onSubmit = async (data: LoginFormValues) => {
     try {
-      console.log("🔐 Attempting login...");
-      console.log("📍 Current URL:", window.location.href);
-      console.log("🎯 API URL:", API_URLS.AUTH_LOGIN);
-
-      // Gọi API để kiểm tra đăng nhập
-      const response = await fetch(API_URLS.AUTH_LOGIN, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username,
-          password,
-        }),
+      setIsLoading(true);
+      await login(data.email, data.password);
+      toast({
+        title: "Đăng nhập thành công",
+        description: "Chào mừng bạn quay lại hệ thống.",
       });
-
-      console.log("📡 Response status:", response.status);
-      const data = await response.json();
-      console.log("📄 Response data:", data);
-
-      if (data.success) {
-        console.log("✅ Login successful, redirecting...");
-
-        // Kiểm tra cookie được set chưa
-        const cookies = document.cookie;
-        console.log("🍪 Current cookies:", cookies);
-
-        // Hiển thị thông báo thành công
-        toast({
-          title: "Đăng nhập thành công",
-          description: "Chào mừng bạn quay trở lại!",
-        });
-
-        // Chuyển hướng về trang chủ với window.location để force reload
-        console.log("🔄 Redirecting to dashboard...");
-
-        // Sử dụng router.replace để tránh back button issues
-        router.replace("/");
-
-        // Fallback: nếu router không hoạt động, dùng window.location
-        setTimeout(() => {
-          if (window.location.pathname === "/login") {
-            console.log("🔄 Router redirect failed, using window.location...");
-            window.location.href = "/";
-          }
-        }, 1000);
-      } else {
-        console.error("❌ Login failed:", data.message);
-        setError(data.message || "Đăng nhập thất bại!");
-      }
+      router.push("/");
     } catch (error) {
-      console.error("❌ Login error:", error);
-      setError("Đã xảy ra lỗi trong quá trình đăng nhập. Vui lòng thử lại.");
+      toast({
+        title: "Đăng nhập thất bại",
+        description: error instanceof Error ? error.message : "Đã có lỗi xảy ra",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -97,47 +80,44 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-md text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">Tài khoản</Label>
-            <Input
-              id="username"
-              placeholder="Nhập tài khoản của bạn"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="admin@hmc.com" {...field} disabled={isLoading} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Mật khẩu</Label>
-              <Button
-                variant="link"
-                className="p-0 h-auto text-xs"
-                type="button"
-              >
-                Quên mật khẩu?
-              </Button>
-            </div>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Nhập mật khẩu của bạn"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Mật khẩu</FormLabel>
+                    <Button variant="link" className="p-0 h-auto text-xs" type="button">
+                      Quên mật khẩu?
+                    </Button>
+                  </div>
+                  <FormControl>
+                    <Input type="password" placeholder="Nhập mật khẩu của bạn" {...field} disabled={isLoading} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <Button className="w-full" type="submit" disabled={loading}>
-            {loading ? "Đang đăng nhập..." : "Đăng nhập"}
-          </Button>
-        </form>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Đang xử lý..." : "Đăng nhập"}
+            </Button>
+          </form>
+        </Form>
       </div>
     </div>
   );

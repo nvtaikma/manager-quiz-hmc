@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import {
   XAxis,
   YAxis,
@@ -69,9 +70,9 @@ export default function Dashboard() {
 
       const responses = await Promise.all(
         endpoints.map((endpoint) =>
-          fetch(`${API_BASE_URL}/${endpoint}`)
-            .then((res) => res.json())
-            .catch((err) => {
+          fetchApi(`/${endpoint}`)
+            .then((res: Response) => res.json())
+            .catch((err: Error) => {
               console.error(`Error fetching ${endpoint}:`, err);
               return null;
             })

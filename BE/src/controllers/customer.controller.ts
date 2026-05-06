@@ -85,6 +85,18 @@ class CustomerController {
       data: session,
     });
   }
+
+  async getCustomerById(req: Request, res: Response) {
+    const { id } = req.params as { id: string };
+    const customer = await CustomersService.getCustomerById(id);
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+    return res.json({
+      message: "Customer fetched successfully",
+      data: customer,
+    });
+  }
 }
 
 export default new CustomerController();

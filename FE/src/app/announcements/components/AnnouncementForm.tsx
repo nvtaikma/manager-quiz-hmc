@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import { Editor } from "@tinymce/tinymce-react";
 
 // Định nghĩa location type
@@ -122,7 +123,7 @@ export default function AnnouncementForm({
   const fetchProducts = useCallback(async () => {
     setIsLoadingProducts(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/products/all/full`);
+      const response = await fetchApi(`/products/all/full`);
       if (response.ok) {
         const data = await response.json();
         setProducts(data.data || []);

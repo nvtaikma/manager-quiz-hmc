@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { API_BASE_URL, API_ENDPOINTS } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import ImportTimetableModal from "@/components/classes/ImportTimetableModal";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -42,8 +43,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
   const fetchTimetable = async () => {
     try {
       setLoading(true);
-      const res = await fetch(
-        `${API_BASE_URL}${API_ENDPOINTS.CLASSES}/${encodeURIComponent(className)}/timetable`
+      const res = await fetchApi(`${API_ENDPOINTS.CLASSES}/${encodeURIComponent(className)}/timetable`
       );
       const data = await res.json();
       if (data.data) {

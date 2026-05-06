@@ -11,8 +11,17 @@ import sessionRouter from "./Session.route";
 import userRouter from "./User.route";
 import practiceExamHistoryRouter from "./PracticeExamHistory.route";
 import classRouter from "../modules/class/class.route";
+import authRouter from "../modules/admin/auth.route";
+
+import { authAdmin } from "../middlewares/authAdmin";
 
 const router = express.Router();
+
+// Public routes
+router.use("/auth", authRouter);
+
+// Protected routes (yêu cầu JWT)
+router.use(authAdmin as any);
 
 router.use("/products", productRouter);
 router.use("/orders", orderRouter);

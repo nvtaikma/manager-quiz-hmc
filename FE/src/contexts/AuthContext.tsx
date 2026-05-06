@@ -2,20 +2,20 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_URLS } from "../contants/api";
+import { API_URLS, getApiUrl } from "../contants/api";
 
 type User = {
   id?: string;
-  username: string;
   email: string;
   role?: string;
 };
 
 type AuthContextType = {
   user: User | null;
+  isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
-  logout: () => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,22 +26,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Kiểm tra authentication status từ cookie thay vì localStorage
     checkAuthStatus();
   }, []);
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch(API_URLS.AUTH_CHECK);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await fetch(getApiUrl(API_URLS.AUTH_CHECK), {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       const data = await response.json();
 
-      if (data.success && data.authenticated) {
+      if (response.ok && data.user) {
         setUser(data.user);
+        document.cookie = "user=true; path=/; max-age=86400";
       } else {
+        localStorage.removeItem("token");
+        document.cookie = "user=; path=/; max-age=0";
         setUser(null);
       }
     } catch (error) {
       console.error("Lỗi kiểm tra auth status:", error);
+      localStorage.removeItem("token");
+      document.cookie = "user=; path=/; max-age=0";
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -50,58 +65,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Hàm đăng nhập
   const login = async (
-    username: string,
+    email: string,
     password: string
   ): Promise<boolean> => {
     setIsLoading(true);
 
     try {
-      // Gọi API để đăng nhập
-      const response = await fetch(API_URLS.AUTH_LOGIN, {
+      // Gọi API Backend Express để đăng nhập
+      const response = await fetch(getApiUrl(API_URLS.AUTH_LOGIN), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
 
-      if (data.success && data.user) {
+      if (response.ok && data.token && data.user) {
+        localStorage.setItem("token", data.token);
+        document.cookie = "user=true; path=/; max-age=86400";
+        document.cookie = `token=${data.token}; path=/; max-age=86400`;
         setUser(data.user);
         setIsLoading(false);
         return true;
       } else {
         setIsLoading(false);
-        return false;
+        throw new Error(data.message || "Đăng nhập thất bại");
       }
     } catch (error) {
       console.error("Lỗi đăng nhập:", error);
       setIsLoading(false);
-      return false;
+      throw error;
     }
   };
 
   // Hàm đăng xuất
-  const logout = async () => {
-    try {
-      // Gọi API để đăng xuất
-      await fetch(API_URLS.AUTH_LOGOUT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-    } catch (error) {
-      console.error("Lỗi đăng xuất:", error);
-    } finally {
-      setUser(null);
-      router.push("/login");
-    }
+  const logout = () => {
+    localStorage.removeItem("token");
+    document.cookie = "user=; path=/; max-age=0";
+    setUser(null);
+    router.push("/login");
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 
 export interface Question {
   _id: string;
@@ -28,8 +29,7 @@ export const useQuestions = (productId: string) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(
-        `${API_BASE_URL}/products/${productId}/exams`
+      const response = await fetchApi(`/products/${productId}/exams`
       );
 
       if (!response.ok) {
@@ -51,8 +51,7 @@ export const useQuestions = (productId: string) => {
       const allQuestions: Question[] = [];
       for (const exam of examList) {
         try {
-          const questionResponse = await fetch(
-            `${API_BASE_URL}/exams/${exam._id}/questions`
+          const questionResponse = await fetchApi(`/exams/${exam._id}/questions`
           );
           if (questionResponse.ok) {
             const questionData = await questionResponse.json();

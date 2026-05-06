@@ -3,7 +3,8 @@ import { format, isPast, isToday, startOfDay } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { API_BASE_URL, API_ENDPOINTS } from "@/contants/api";
+import { API_ENDPOINTS } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import { CalendarClock, MapPin, User, Clock, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -59,7 +60,7 @@ export default function ExamScheduleModal({ isOpen, onClose }: ExamScheduleModal
       setLoading(true);
       setError(null);
       // Construct endpoint URL. Assuming backend routes to /api/classes/exam-schedules
-      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CLASSES}/exam-schedules`);
+      const res = await fetchApi(`${API_ENDPOINTS.CLASSES}/exam-schedules`);
       if (!res.ok) {
         throw new Error(`Failed to fetch: ${res.statusText}`);
       }

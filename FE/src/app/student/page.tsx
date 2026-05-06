@@ -6,6 +6,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Student, StudentsResponse } from "./components/types";
 import { StudentTable } from "./components/StudentTable";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import { useSearchParams, useRouter } from "next/navigation";
 
 // Loading component
@@ -68,7 +69,8 @@ function StudentContent(): ReactNode {
       const url = new URL(`${API_BASE_URL}/students/status/${status}`);
       url.searchParams.append("page", page.toString());
 
-      const response = await fetch(url.toString());
+      const endpoint = url.pathname.replace('/api', '') + url.search;
+      const response = await fetchApi(endpoint);
 
       if (!response.ok) {
         throw new Error("Không thể tải danh sách sinh viên");
@@ -147,7 +149,7 @@ function StudentContent(): ReactNode {
             if (!confirm("Bạn có chắc muốn quét tất cả học viên đã sử dụng khóa học quá 90 ngày và chuyển sang trạng thái Hết Hạn không?")) return;
             try {
                setLoading(true);
-               const res = await fetch(`${API_BASE_URL}/students/exprire`, { method: "PATCH" });
+               const res = await fetchApi(`/students/exprire`, { method: "PATCH" });
                const data = await res.json();
                if(res.ok) {
                   alert(`✅ Quét thành công! Đã chuyển ${data.data.modifiedCount} học viên sang hết hạn.`);

@@ -148,6 +148,10 @@ class CustomersService {
        sessionHistory
     };
   }
+
+  async getCustomerById(id: string) {
+    return await Customer.findById(id).select("-__v -createdAt -updatedAt").lean();
+  }
 }
 
 export default new CustomersService();

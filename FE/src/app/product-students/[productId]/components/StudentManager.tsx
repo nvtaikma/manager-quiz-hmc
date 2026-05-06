@@ -58,6 +58,7 @@ import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 
 interface Student {
   _id: string;
@@ -126,8 +127,7 @@ const StudentManager = ({ productId }: { productId: string }) => {
 
   const fetchStudentCount = async () => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/students/count/${productId}`
+      const response = await fetchApi(`/students/count/${productId}`
       );
       if (!response.ok) throw new Error("Failed to fetch student count");
       const data = await response.json();
@@ -140,8 +140,7 @@ const StudentManager = ({ productId }: { productId: string }) => {
   const fetchSearchStudents = async (keyword: string, page: number = 1) => {
     try {
       setIsLoading(true);
-      const response = await fetch(
-        `${API_BASE_URL}/students/search/${productId}?keyword=${encodeURIComponent(
+      const response = await fetchApi(`/students/search/${productId}?keyword=${encodeURIComponent(
           keyword
         )}&page=${page}`
       );
@@ -263,9 +262,9 @@ const StudentManager = ({ productId }: { productId: string }) => {
   const fetchStudents = async (page: number = 1) => {
     try {
       setIsLoading(true);
-      const url = `${API_BASE_URL}/students/${productId}?page=${page}&limit=${ITEMS_PER_PAGE}`;
+      const url = `/students/${productId}?page=${page}&limit=${ITEMS_PER_PAGE}`;
 
-      const response = await fetch(url);
+      const response = await fetchApi(url);
       if (!response.ok) throw new Error("Failed to fetch students");
       const data = await response.json();
 
@@ -319,7 +318,7 @@ const StudentManager = ({ productId }: { productId: string }) => {
   // Trong hàm handleAddStudent
   const handleAddStudent = async (values: z.infer<typeof formSchema>) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/students`, {
+      const response = await fetchApi(`/students`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -376,7 +375,7 @@ const StudentManager = ({ productId }: { productId: string }) => {
   };
   const handleDeleteStudent = async (studentId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/students//${studentId}`, {
+      const response = await fetchApi(`/students//${studentId}`, {
         method: "DELETE",
       });
 

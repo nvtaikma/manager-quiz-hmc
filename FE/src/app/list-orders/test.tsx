@@ -39,6 +39,7 @@ import {
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 
 interface Product {
   _id: string;
@@ -134,7 +135,7 @@ export default function ListOrders() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/orders/list`);
+      const response = await fetchApi(`/orders/list`);
       if (!response.ok) {
         throw new Error("Không thể tải danh sách đơn hàng");
       }
@@ -150,7 +151,7 @@ export default function ListOrders() {
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
+      const response = await fetchApi(`/orders/${orderId}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -176,7 +177,7 @@ export default function ListOrders() {
 
   const fetchOrderDetails = async (orderId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/id/${orderId}`);
+      const response = await fetchApi(`/orders/id/${orderId}`);
       if (!response.ok) {
         throw new Error("Không thể tải thông tin đơn hàng");
       }

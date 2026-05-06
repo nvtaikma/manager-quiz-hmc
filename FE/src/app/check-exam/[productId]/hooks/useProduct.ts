@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 
 interface Product {
   _id: string;
@@ -16,7 +17,7 @@ export const useProduct = (productId: string) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/products/${productId}`);
+      const response = await fetchApi(`/products/${productId}`);
 
       if (!response.ok) {
         throw new Error(

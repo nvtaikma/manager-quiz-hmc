@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Laptop, Smartphone, Monitor } from "lucide-react";
 
@@ -69,7 +70,7 @@ export default function UserSessionModal({ isOpen, onClose, userId, userName, ex
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`${API_BASE_URL}/customers/${userId}/session`);
+      const res = await fetchApi(`/customers/${userId}/session`);
       const data = await res.json();
       
       if (res.ok) {

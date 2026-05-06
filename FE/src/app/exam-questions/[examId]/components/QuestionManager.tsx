@@ -83,6 +83,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import * as XLSX from "xlsx";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import { handleImageUpload } from "@/lib/upload";
 
 interface Answer {
@@ -217,7 +218,7 @@ export function QuestionManager({ examId }: { examId: string }) {
   // Lấy thông tin đề thi
   const fetchExam = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}`);
+      const response = await fetchApi(`/exams/${examId}`);
       if (!response.ok) {
         throw new Error("Không thể tải thông tin đề thi");
       }
@@ -239,7 +240,7 @@ export function QuestionManager({ examId }: { examId: string }) {
   const fetchQuestions = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/questions`);
+      const response = await fetchApi(`/exams/${examId}/questions`);
       if (!response.ok) {
         throw new Error("Không thể tải danh sách câu hỏi");
       }
@@ -330,8 +331,7 @@ export function QuestionManager({ examId }: { examId: string }) {
 
     try {
       setActionLoading(true);
-      const response = await fetch(
-        `${API_BASE_URL}/exams/${examId}/questions`,
+      const response = await fetchApi(`/exams/${examId}/questions`,
         {
           method: "POST",
           headers: {
@@ -394,7 +394,7 @@ export function QuestionManager({ examId }: { examId: string }) {
 
     try {
       setActionLoading(true);
-      const response = await fetch(`${API_BASE_URL}/questions/${questionId}`, {
+      const response = await fetchApi(`/questions/${questionId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -430,7 +430,7 @@ export function QuestionManager({ examId }: { examId: string }) {
   const deleteQuestion = async (questionId: string) => {
     try {
       setActionLoading(true);
-      const response = await fetch(`${API_BASE_URL}/questions/${questionId}`, {
+      const response = await fetchApi(`/questions/${questionId}`, {
         method: "DELETE",
       });
 
@@ -461,7 +461,7 @@ export function QuestionManager({ examId }: { examId: string }) {
   const handleBulkDelete = async () => {
     try {
       setBulkDeleteLoading(true);
-      const response = await fetch(`${API_BASE_URL}/questions/bulk`, {
+      const response = await fetchApi(`/questions/bulk`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questionIds: Array.from(selectedIds) }),
@@ -545,7 +545,7 @@ export function QuestionManager({ examId }: { examId: string }) {
   const fetchQuestionDetail = async (questionId: string) => {
     try {
       setFetchingQuestion(true);
-      const response = await fetch(`${API_BASE_URL}/questions/${questionId}`);
+      const response = await fetchApi(`/questions/${questionId}`);
       if (!response.ok) {
         throw new Error("Không thể tải thông tin câu hỏi");
       }
@@ -1232,8 +1232,7 @@ export function QuestionManager({ examId }: { examId: string }) {
 
     try {
       setActionLoading(true);
-      const response = await fetch(
-        `${API_BASE_URL}/exams/${examId}/questions/batch`,
+      const response = await fetchApi(`/exams/${examId}/questions/batch`,
         {
           method: "POST",
           headers: {

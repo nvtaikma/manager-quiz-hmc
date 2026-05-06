@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import { NextRequest, NextResponse } from "next/server";
 
 // Đặt địa chỉ backend API

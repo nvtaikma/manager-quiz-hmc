@@ -33,6 +33,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { UserTable } from "./components/UserTable";
 import { useDebounce } from "@/hooks/useDebounce";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 
 interface User {
   _id: string;
@@ -111,8 +112,8 @@ function ManageUsersContent() {
   const fetchUsers = async () => {
     try {
       setTableLoading(true);
-      const response = await fetch(
-        `${API_BASE_URL}/customers/list?page=${currentPage}`
+      const response = await fetchApi(
+        `/customers/list?page=${currentPage}`
       );
       if (!response.ok) {
         throw new Error("Không thể tải danh sách người dùng");
@@ -139,13 +140,10 @@ function ManageUsersContent() {
 
   const updateUserStatus = async (userId: string, newStatus: string) => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/customers/${userId}/status?status=${newStatus}`,
+      const response = await fetchApi(
+        `/customers/${userId}/status?status=${newStatus}`,
         {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
         }
       );
       if (!response.ok) {
@@ -168,11 +166,8 @@ function ManageUsersContent() {
     email: string
   ) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/customers/${userId}`, {
+      const response = await fetchApi(`/customers/${userId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ name, email }),
       });
       if (!response.ok) {
@@ -193,8 +188,8 @@ function ManageUsersContent() {
   const searchUsers = async () => {
     try {
       setTableLoading(true);
-      const response = await fetch(
-        `${API_BASE_URL}/customers/search?keyword=${debouncedSearchTerm}&page=${currentPage}`
+      const response = await fetchApi(
+        `/customers/search?keyword=${debouncedSearchTerm}&page=${currentPage}`
       );
       if (!response.ok) {
         throw new Error("Không thể tìm kiếm người dùng");

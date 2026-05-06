@@ -46,6 +46,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { Textarea } from "@/components/ui/textarea";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import {
   Select,
   SelectContent,
@@ -102,7 +103,7 @@ export function ExamManager({ productId }: { productId: string }) {
   // Hàm lấy thông tin sản phẩm
   const fetchProduct = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/products/${productId}`);
+      const response = await fetchApi(`/products/${productId}`);
       if (!response.ok) {
         throw new Error("Không thể tải thông tin sản phẩm");
       }
@@ -124,8 +125,7 @@ export function ExamManager({ productId }: { productId: string }) {
   const fetchExams = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(
-        `${API_BASE_URL}/products/${productId}/exams`
+      const response = await fetchApi(`/products/${productId}/exams`
       );
       if (!response.ok) {
         throw new Error("Không thể tải danh sách đề thi");
@@ -173,8 +173,7 @@ export function ExamManager({ productId }: { productId: string }) {
   const onSubmit = async (values: z.infer<typeof examSchema>) => {
     try {
       setActionLoading(true);
-      const response = await fetch(
-        `${API_BASE_URL}/products/${productId}/exams`,
+      const response = await fetchApi(`/products/${productId}/exams`,
         {
           method: "POST",
           headers: {
@@ -215,7 +214,7 @@ export function ExamManager({ productId }: { productId: string }) {
   ) => {
     try {
       setActionLoading(true);
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}`, {
+      const response = await fetchApi(`/exams/${examId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -251,7 +250,7 @@ export function ExamManager({ productId }: { productId: string }) {
   const deleteExam = async (examId: string) => {
     try {
       setActionLoading(true);
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}`, {
+      const response = await fetchApi(`/exams/${examId}`, {
         method: "DELETE",
       });
 
@@ -282,8 +281,7 @@ export function ExamManager({ productId }: { productId: string }) {
   const handleSyncCounts = async () => {
     try {
       setActionLoading(true);
-      const response = await fetch(
-        `${API_BASE_URL}/products/${productId}/sync-question-counts`,
+      const response = await fetchApi(`/products/${productId}/sync-question-counts`,
         {
           method: "PUT",
         }

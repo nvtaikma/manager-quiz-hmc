@@ -10,6 +10,7 @@ import { OrderTable } from "./components/OrderTable";
 import { Pagination } from "@/components/ui/pagination";
 import { useRouter, useSearchParams } from "next/navigation";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -117,9 +118,13 @@ function OrdersContent(): ReactNode {
         if (userId) {
           url.searchParams.append("userId", userId);
         }
-        const response = await fetch(url.toString(), {
+        
+        // Extract the endpoint path from the url object
+        const endpoint = url.pathname.replace('/api', '') + url.search;
+        const response = await fetchApi(endpoint, {
           signal: abortController.signal,
         });
+        
         if (!response.ok) throw new Error("Không thể tải danh sách đơn hàng");
 
         const data = await response.json();
@@ -149,7 +154,7 @@ function OrdersContent(): ReactNode {
 
   const fetchProductName = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/products/id/${productId}`);
+      const response = await fetchApi(`/products/${productId}`);
       if (!response.ok) throw new Error("Không thể tải thông tin sản phẩm");
       const data = await response.json();
       setProductName(data.data.name);
@@ -160,7 +165,7 @@ function OrdersContent(): ReactNode {
 
   const fetchUserName = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/customers/id/${userId}`);
+      const response = await fetchApi(`/customers/${userId}`);
       if (!response.ok) throw new Error("Không thể tải thông tin người dùng");
       const data = await response.json();
       setUserName(data.data.name);
@@ -190,9 +195,8 @@ function OrdersContent(): ReactNode {
       // Vì logic Backend tự động xử lý Thêm/Xóa/Sửa trạng thái Sinh viên từ order.service
       // (Bao hàm cả deleteStudent mặc định thông qua cancel order)
       // client chỉ việc cập nhật trạng thái Order:
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
+      const response = await fetchApi(`/orders/${orderId}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
 
@@ -232,7 +236,7 @@ function OrdersContent(): ReactNode {
   const fetchOrderDetails = async (orderId: string) => {
     try {
       setDetailLoading(true);
-      const response = await fetch(`${API_BASE_URL}/orders/id/${orderId}`);
+      const response = await fetchApi(`/orders/id/${orderId}`);
 
       if (!response.ok) throw new Error("Không thể tải thông tin đơn hàng");
 
@@ -288,8 +292,8 @@ function OrdersContent(): ReactNode {
       setCurrentPage(1);
 
       // Lấy tên người dùng
-      const userResponse = await fetch(
-        `${API_BASE_URL}/customers/id/${userId}`
+      const userResponse = await fetchApi(
+        `/customers/id/${userId}`
       );
       if (userResponse.ok) {
         const userData = await userResponse.json();

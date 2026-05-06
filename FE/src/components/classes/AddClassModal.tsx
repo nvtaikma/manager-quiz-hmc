@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea"; // Assuming you have this or use stock input
 import { Label } from "@/components/ui/label";
-import { API_BASE_URL, API_ENDPOINTS } from "@/contants/api";
+import { API_ENDPOINTS } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast"; // Adjust path if needed
 
 interface AddClassModalProps {
@@ -39,7 +40,7 @@ export default function AddClassModal({ isOpen, onClose, onSuccess }: AddClassMo
         return;
       }
 
-      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CLASSES}/bulk`, {
+      const res = await fetchApi(`${API_ENDPOINTS.CLASSES}/bulk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ classes }),

@@ -2,6 +2,7 @@ import { Card, CardContent, CardTitle, CardHeader } from "@/components/ui/card";
 import { StudentManager } from "./components/StudentManager";
 
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 
 import { BackButton } from "./components/BackButton";
 
@@ -13,8 +14,7 @@ export default async function ProductStudentsPage({
   const resolvedParams = await params;
 
   const fetchProduct = async () => {
-    const response = await fetch(
-      `${API_BASE_URL}/products/${resolvedParams.productId}`
+    const response = await fetchApi(`/products/${resolvedParams.productId}`
     );
     const { data: product } = await response.json();
     return product;

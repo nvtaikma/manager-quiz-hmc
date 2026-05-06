@@ -12,6 +12,7 @@ import AnnouncementForm, {
   AnnouncementFormValues,
 } from "./components/AnnouncementForm";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import { Loader2, Plus } from "lucide-react";
 import { CreateAnnouncementButton } from "./components/CreateAnnouncementButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,8 +62,7 @@ export default function AnnouncementsPage() {
   const fetchAnnouncements = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(
-        `${API_BASE_URL}/announcements?page=${currentPage}&limit=${itemsPerPage}`
+      const response = await fetchApi(`/announcements?page=${currentPage}&limit=${itemsPerPage}`
       );
 
       if (!response.ok) {
@@ -162,7 +162,7 @@ export default function AnnouncementsPage() {
   const handleCreateAnnouncement = async (data: AnnouncementFormValues) => {
     setActionLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/announcements`, {
+      const response = await fetchApi(`/announcements`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -202,7 +202,7 @@ export default function AnnouncementsPage() {
   ) => {
     setActionLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/announcements/${id}`, {
+      const response = await fetchApi(`/announcements/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -239,7 +239,7 @@ export default function AnnouncementsPage() {
   const handleDeleteAnnouncement = async (id: string) => {
     setActionLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/announcements/${id}`, {
+      const response = await fetchApi(`/announcements/${id}`, {
         method: "DELETE",
       });
 

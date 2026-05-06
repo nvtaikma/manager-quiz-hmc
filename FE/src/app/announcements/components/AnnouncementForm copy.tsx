@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import { Editor, IAllProps } from "@tinymce/tinymce-react";
 import { Editor as TinyMCEEditor } from "tinymce";
 
@@ -123,7 +124,7 @@ export default function AnnouncementForm({
     console.log("Fetching products...");
     setIsLoadingProducts(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/products/all/full`);
+      const response = await fetchApi(`/products/all/full`);
       if (response.ok) {
         const data = await response.json();
         console.log("Products fetched:", data.data?.length || 0, "items");

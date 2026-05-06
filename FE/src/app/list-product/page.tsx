@@ -58,6 +58,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import ProductTable from "@/app/list-product/components/ProductTable";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import { handleImageUpload } from "@/lib/upload";
 
 interface Product {
@@ -102,7 +103,7 @@ export default function ListProducts() {
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/products/all/full`);
+      const response = await fetchApi(`/products/all/full`);
       if (!response.ok) {
         throw new Error("Không thể tải danh sách sản phẩm");
       }
@@ -150,11 +151,8 @@ export default function ListProducts() {
   const onSubmit = async (values: z.infer<typeof productSchema>) => {
     try {
       setActionLoading(true);
-      const response = await fetch(`${API_BASE_URL}/products`, {
+      const response = await fetchApi(`/products`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(values),
       });
 
@@ -186,11 +184,8 @@ export default function ListProducts() {
   ) => {
     try {
       setActionLoading(true);
-      const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+      const response = await fetchApi(`/products/${id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(values),
       });
 
@@ -219,7 +214,7 @@ export default function ListProducts() {
   const deleteProduct = async (id: string) => {
     try {
       setActionLoading(true);
-      const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+      const response = await fetchApi(`/products/${id}`, {
         method: "DELETE",
       });
 

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { API_BASE_URL, API_ENDPOINTS } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 interface ImportTimetableModalProps {
@@ -34,17 +35,17 @@ export default function ImportTimetableModal({ isOpen, onClose, onSuccess, class
 
       // Check if data matches current class context
       if (classNameStr) {
-        const mismatch = data.some((item: any) => item.ten_lop?.trim() !== classNameStr.trim());
+        const mismatch = data.some((item: Record<string, unknown>) => typeof item.ten_lop === "string" && item.ten_lop.trim() !== classNameStr.trim());
         if (mismatch) {
            throw new Error(`Dữ liệu JSON chứa lớp không khớp với lớp hiện tại (${classNameStr}). Vui lòng kiểm tra lại.`);
         }
       }
 
       const endpoint = classNameStr 
-  ? `${API_BASE_URL}${API_ENDPOINTS.CLASSES}/${encodeURIComponent(classNameStr)}/timetable/import`
-  : `${API_BASE_URL}${API_ENDPOINTS.CLASSES}/timetable/import`;
+  ? `${API_ENDPOINTS.CLASSES}/${encodeURIComponent(classNameStr)}/timetable/import`
+  : `${API_ENDPOINTS.CLASSES}/timetable/import`;
 
-      const res = await fetch(endpoint, {
+      const res = await fetchApi(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -62,12 +63,12 @@ export default function ImportTimetableModal({ isOpen, onClose, onSuccess, class
       onSuccess();
       onClose();
       setJsonStr("");
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
       toast({
         variant: "destructive",
         title: "Lỗi",
-        description: error.message || "Lỗi định dạng JSON hoặc server error.",
+        description: error instanceof Error ? error.message : "Lỗi định dạng JSON hoặc server error.",
       });
     } finally {
       setLoading(false);

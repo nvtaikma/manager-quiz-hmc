@@ -10,6 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { API_BASE_URL } from "@/contants/api";
+import { fetchApi } from "@/lib/api";
 import {
   BarChart,
   Bar,
@@ -103,8 +104,7 @@ export default function UserActivityModal({
         setSelectedDay(null);
 
         // BE tự map customerId → authUserId, FE không cần biết
-        const res = await fetch(
-          `${API_BASE_URL}/customers/${customerId}/sessions?days=7`
+        const res = await fetchApi(`/customers/${customerId}/sessions?days=7`
         );
 
         if (!res.ok) throw new Error("Không thể tải dữ liệu hoạt động");

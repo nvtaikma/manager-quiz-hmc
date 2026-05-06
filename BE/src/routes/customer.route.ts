@@ -43,4 +43,6 @@ router.get(
   asyncHandler(UserActivityController.getSessions)
 );
 
+router.get("/:id", asyncHandler(CustomerController.getCustomerById));
+
 export default router;
