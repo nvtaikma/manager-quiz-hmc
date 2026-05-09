@@ -1,9 +1,10 @@
 import { toast } from "@/components/ui/use-toast";
+import { fetchApi } from "@/lib/api";
 
 const handleImageUpload = async (
   e: React.ChangeEvent<HTMLInputElement>,
   onSuccess?: (imageUrl: string) => void,
-  setUploading?: (uploading: boolean) => void
+  setUploading?: (uploading: boolean) => void,
 ) => {
   const files = e.target.files;
   if (!files || files.length === 0) return;
@@ -34,78 +35,43 @@ const handleImageUpload = async (
   try {
     setUploading?.(true);
 
-    // Đọc file thành base64
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
+    // Gửi file qua Backend API để chèn watermark trước khi upload lên cloud
+    const formData = new FormData();
+    formData.append("image", file);
 
-    reader.addEventListener("load", async () => {
-      try {
-        const data = reader.result?.toString().split(",")[1];
-        if (!data) {
-          throw new Error("Không thể đọc dữ liệu ảnh");
-        }
-
-        const postData = {
-          name: file.name,
-          type: file.type,
-          data: data,
-        };
-
-        const response = await fetch(
-          "https://script.google.com/macros/s/AKfycbwvWbfkZhCzHxru2euDalTHdjvtgKn4vOYEDFlwiyHS6nj53_WKKLf3x_XGHsa1Bj1gHA/exec",
-          {
-            method: "POST",
-            body: JSON.stringify(postData),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Không thể tải lên ảnh");
-        }
-
-        const responseData = await response.json();
-        console.log(responseData);
-
-        if (responseData.link) {
-          onSuccess?.(responseData.link);
-          toast({
-            title: "Thành công",
-            description: "Tải lên ảnh thành công",
-          });
-        } else {
-          throw new Error("Không nhận được link ảnh từ server");
-        }
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Lỗi không xác định";
-        console.error("Lỗi khi tải lên ảnh:", errorMessage);
-        toast({
-          title: "Lỗi",
-          description: "Không thể tải lên ảnh. Vui lòng thử lại.",
-          variant: "destructive",
-        });
-      } finally {
-        setUploading?.(false);
-      }
+    const response = await fetchApi("/upload/image", {
+      method: "POST",
+      body: formData,
+      // Không set Content-Type header – fetchApi đã tự detect FormData
     });
 
-    reader.addEventListener("error", () => {
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.message || "Không thể tải lên ảnh");
+    }
+
+    const responseData = await response.json();
+    console.log(responseData);
+
+    if (responseData.data?.link) {
+      onSuccess?.(responseData.data.link);
       toast({
-        title: "Lỗi",
-        description: "Không thể đọc file ảnh",
-        variant: "destructive",
+        title: "Thành công",
+        description: "Tải lên ảnh thành công (đã chèn watermark)",
       });
-      setUploading?.(false);
-    });
+    } else {
+      throw new Error("Không nhận được link ảnh từ server");
+    }
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Lỗi không xác định";
-    console.error("Lỗi khi xử lý ảnh:", errorMessage);
+    console.error("Lỗi khi tải lên ảnh:", errorMessage);
     toast({
       title: "Lỗi",
-      description: "Không thể xử lý ảnh. Vui lòng thử lại.",
+      description: "Không thể tải lên ảnh. Vui lòng thử lại.",
       variant: "destructive",
     });
+  } finally {
     setUploading?.(false);
   }
 };

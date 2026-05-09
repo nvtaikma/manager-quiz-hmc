@@ -17,6 +17,7 @@ const User_route_1 = __importDefault(require("./User.route"));
 const PracticeExamHistory_route_1 = __importDefault(require("./PracticeExamHistory.route"));
 const class_route_1 = __importDefault(require("../modules/class/class.route"));
 const auth_route_1 = __importDefault(require("../modules/admin/auth.route"));
+const upload_route_1 = __importDefault(require("./upload.route"));
 const authAdmin_1 = require("../middlewares/authAdmin");
 const router = express_1.default.Router();
 // Public routes
@@ -35,4 +36,5 @@ router.use("/sessions", Session_route_1.default);
 router.use("/users", User_route_1.default);
 router.use("/PracticeExamHistory", PracticeExamHistory_route_1.default);
 router.use("/classes", class_route_1.default);
+router.use("/upload", upload_route_1.default);
 exports.default = router;
