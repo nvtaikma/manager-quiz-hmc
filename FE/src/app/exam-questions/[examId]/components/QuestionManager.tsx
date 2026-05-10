@@ -1772,6 +1772,19 @@ export function QuestionManager({ examId }: { examId: string }) {
                           <div className="line-clamp-3 md:line-clamp-2">
                             {question.text}
                           </div>
+                          {question.image && (
+                            <Badge
+                              variant="outline"
+                              className="mt-1 text-xs gap-1 text-blue-600 border-blue-200 bg-blue-50 cursor-pointer hover:bg-blue-100"
+                              onClick={() => {
+                                setImagePreviewUrl(question.image!);
+                                setShowImagePreview(true);
+                              }}
+                            >
+                              <ImageIcon className="h-3 w-3" />
+                              Có hình ảnh
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">

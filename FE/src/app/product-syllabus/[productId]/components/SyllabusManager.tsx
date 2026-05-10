@@ -599,9 +599,17 @@ export function SyllabusManager({ productId }: { productId: string }) {
                           {question.text}
                         </p>
                         {question.image && (
-                          <span className="text-xs text-muted-foreground">
-                            (Có hình ảnh)
-                          </span>
+                          <Badge
+                            variant="outline"
+                            className="mt-1 text-xs gap-1 text-blue-600 border-blue-200 bg-blue-50 cursor-pointer hover:bg-blue-100"
+                            onClick={() => {
+                              setImagePreviewUrl(question.image!);
+                              setShowImagePreview(true);
+                            }}
+                          >
+                            <ImageIcon className="h-3 w-3" />
+                            Có hình ảnh
+                          </Badge>
                         )}
                       </div>
                     </TableCell>
