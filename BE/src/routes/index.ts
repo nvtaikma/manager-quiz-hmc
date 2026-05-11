@@ -13,6 +13,7 @@ import practiceExamHistoryRouter from "./PracticeExamHistory.route";
 import classRouter from "../modules/class/class.route";
 import authRouter from "../modules/admin/auth.route";
 import uploadRouter from "./upload.route";
+import extensionRouter from "./extension.route";
 
 import { authAdmin } from "../middlewares/authAdmin";
 
@@ -20,6 +21,9 @@ const router = express.Router();
 
 // Public routes
 router.use("/auth", authRouter);
+
+// Extension routes (API Key auth, no JWT required)
+router.use(extensionRouter);
 
 // Protected routes (yêu cầu JWT)
 router.use(authAdmin as any);
