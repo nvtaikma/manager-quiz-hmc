@@ -14,6 +14,7 @@ import classRouter from "../modules/class/class.route";
 import authRouter from "../modules/admin/auth.route";
 import uploadRouter from "./upload.route";
 import extensionRouter from "./extension.route";
+import questionReportRouter from "./questionReport.route";
 
 import { authAdmin } from "../middlewares/authAdmin";
 
@@ -41,5 +42,6 @@ router.use("/users", userRouter);
 router.use("/PracticeExamHistory", practiceExamHistoryRouter);
 router.use("/classes", classRouter);
 router.use("/upload", uploadRouter);
+router.use("/reports", questionReportRouter);
 
 export default router;

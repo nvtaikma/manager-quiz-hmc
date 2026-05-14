@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
-// const uri = "mongodb://localhost:27017/google-auth";
-const uri = "mongodb://hmcuser:hmcuser1a123@157.10.199.146:27017/admin";
+const uri = "mongodb://localhost:27017/google-auth";
+// const uri = "mongodb://hmcuser:hmcuser1a123@157.10.199.146:27017/admin";
 // const uri = "mongodb://nvtaikma:nvtaikma@172.17.0.1:27017/admin";
 
 async function connectDB() {

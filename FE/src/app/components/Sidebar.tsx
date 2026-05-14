@@ -15,6 +15,7 @@ import {
   Menu,
   ChevronRight,
   GraduationCap,
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -105,6 +106,13 @@ const navItems = [
     label: "Students",
     title: "Sinh viên",
     description: "Danh sách sinh viên theo trạng thái",
+  },
+  {
+    href: "/reports",
+    icon: AlertTriangle,
+    label: "Reports",
+    title: "Báo cáo lỗi",
+    description: "Quản lý báo cáo lỗi câu hỏi",
   },
   {
     href: "/classes",
