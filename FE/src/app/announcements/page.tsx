@@ -13,7 +13,18 @@ import AnnouncementForm, {
 } from "./components/AnnouncementForm";
 import { API_BASE_URL } from "@/contants/api";
 import { fetchApi } from "@/lib/api";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { CreateAnnouncementButton } from "./components/CreateAnnouncementButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -50,6 +61,12 @@ export default function AnnouncementsPage() {
     useState<Announcement | null>(null);
   const [itemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
+  const [maintenanceOpen, setMaintenanceOpen] = useState(false);
+  const [maintenanceMsg, setMaintenanceMsg] = useState(
+    "⚠️ Hệ thống sẽ bảo trì sau 3 phút!"
+  );
+  const [maintenanceDuration, setMaintenanceDuration] = useState(3);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
   const { toast } = useToast();
 
   const filterForm = useForm<z.infer<typeof filterSchema>>({
@@ -302,16 +319,127 @@ export default function AnnouncementsPage() {
     return "Tạo thông báo mới";
   };
 
+  // Gửi thông báo bảo trì tức thì cho app client
+  const handleBroadcastMaintenance = async () => {
+    setMaintenanceLoading(true);
+    try {
+      const res = await fetch("http://localhost:5000/api/admin/broadcast-maintenance", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": "adm_broadcast_k3y_2026",
+        },
+        body: JSON.stringify({
+          message: maintenanceMsg,
+          duration: maintenanceDuration,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Gửi thông báo bảo trì thất bại");
+      }
+
+      toast({
+        title: "✅ Đã gửi thông báo bảo trì",
+        description: `Người dùng sẽ thấy cảnh báo bảo trì trong ${maintenanceDuration} phút.`,
+      });
+      setMaintenanceOpen(false);
+    } catch (error: unknown) {
+      console.error("Broadcast maintenance error:", error);
+      toast({
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể gửi thông báo bảo trì.",
+        variant: "destructive",
+      });
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto py-10 space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Quản lý thông báo</h1>
-        <div className="flex">
+        <div className="flex gap-2">
+          {/* Nút thông báo bảo trì */}
+          <Dialog open={maintenanceOpen} onOpenChange={setMaintenanceOpen}>
+            <DialogTrigger asChild>
+              <Button variant="destructive" className="gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Thông báo bảo trì
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[480px]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  Gửi thông báo bảo trì
+                </DialogTitle>
+                <DialogDescription>
+                  Thông báo sẽ được gửi <strong>ngay lập tức</strong> tới tất cả
+                  người dùng đang sử dụng app.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label htmlFor="maintenance-msg">Nội dung thông báo</Label>
+                  <Textarea
+                    id="maintenance-msg"
+                    value={maintenanceMsg}
+                    onChange={(e) => setMaintenanceMsg(e.target.value)}
+                    rows={3}
+                    placeholder="Nhập nội dung thông báo bảo trì..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maintenance-duration">
+                    Thời gian đếm ngược (phút)
+                  </Label>
+                  <Input
+                    id="maintenance-duration"
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={maintenanceDuration}
+                    onChange={(e) =>
+                      setMaintenanceDuration(Number(e.target.value) || 1)
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Sau {maintenanceDuration} phút, hệ thống sẽ bắt đầu bảo trì.
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setMaintenanceOpen(false)}
+                  disabled={maintenanceLoading}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleBroadcastMaintenance}
+                  disabled={maintenanceLoading || !maintenanceMsg.trim()}
+                  className="gap-2"
+                >
+                  {maintenanceLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4" />
+                  )}
+                  Gửi ngay
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           {editingAnnouncement ? (
             <Button
               onClick={handleCancelEdit}
               variant="outline"
-              className="mr-2"
             >
               Hủy chỉnh sửa
             </Button>
