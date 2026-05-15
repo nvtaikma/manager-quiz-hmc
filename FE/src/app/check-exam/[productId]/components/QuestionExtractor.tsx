@@ -175,11 +175,9 @@ const QuestionExtractor: React.FC<QuestionExtractorProps> = ({
     onProcessStart();
 
     try {
-      if (!pdfLoaded || !window.pdfjsLib) {
-        throw new Error(
-          "Thư viện PDF.js chưa được tải xong. Vui lòng đợi một chút và thử lại.",
-        );
-      }
+      // Import pdfjs-dist trực tiếp thay vì dùng CDN
+      const pdfjs = await import("pdfjs-dist");
+      pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 
       const fileProcessingPromises = Array.from(pdfFiles).map((file) => {
         return new Promise<string>((resolve, reject) => {
@@ -187,8 +185,7 @@ const QuestionExtractor: React.FC<QuestionExtractorProps> = ({
           fileReader.onload = async function () {
             try {
               const typedarray = new Uint8Array(this.result as ArrayBuffer);
-              const pdf = await window.pdfjsLib.getDocument(typedarray.buffer)
-                .promise;
+              const pdf = await pdfjs.getDocument(typedarray).promise;
 
               let fullText = "";
               for (let i = 1; i <= pdf.numPages; i++) {

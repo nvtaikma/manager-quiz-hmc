@@ -11,7 +11,15 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  /* config options here */
+  turbopack: {
+    resolveAlias: {
+      canvas: "./empty-module.js",
+    },
+  },
+  webpack: (config) => {
+    config.resolve.alias.canvas = false;
+    return config;
+  },
 };
 
 export default nextConfig;

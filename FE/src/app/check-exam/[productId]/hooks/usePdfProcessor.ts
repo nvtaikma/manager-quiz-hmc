@@ -1,5 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { QuestionData } from "./useQuestions";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let pdfjsModule: any = null;
+
+async function loadPdfjs() {
+  if (pdfjsModule) return pdfjsModule;
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
+  pdfjsModule = pdfjs;
+  return pdfjs;
+}
 
 /**
  * Extended TextItem interface bao gồm position data từ PDF.js
@@ -202,41 +213,21 @@ export const usePdfProcessor = () => {
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [pdfLibraryError, setPdfLibraryError] = useState<string | null>(null);
 
-  // Initialize PDF.js
+  // Initialize PDF.js from local pdfjs-dist package
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (window.pdfjsLib) {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js";
+    if (typeof window === "undefined") return;
+
+    loadPdfjs()
+      .then(() => {
         setPdfLoaded(true);
         setPdfLibraryError(null);
-        return;
-      }
-
-      const interval = setInterval(() => {
-        if (window.pdfjsLib) {
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js";
-          setPdfLoaded(true);
-          setPdfLibraryError(null);
-          clearInterval(interval);
-        }
-      }, 100);
-
-      const timeout = setTimeout(() => {
-        clearInterval(interval);
-        if (!window.pdfjsLib) {
-          setPdfLibraryError(
-            "Không thể tải thư viện PDF.js sau 10 giây. Vui lòng làm mới trang và thử lại.",
-          );
-        }
-      }, 10000);
-
-      return () => {
-        clearInterval(interval);
-        clearTimeout(timeout);
-      };
-    }
+      })
+      .catch((err) => {
+        console.error("Failed to load pdfjs-dist:", err);
+        setPdfLibraryError(
+          "Không thể tải thư viện PDF.js. Vui lòng làm mới trang và thử lại.",
+        );
+      });
   }, []);
 
   // Hàm xử lý file PDF - sử dụng position-aware text extraction
@@ -246,11 +237,7 @@ export const usePdfProcessor = () => {
     setIsLoading(true);
 
     try {
-      if (!pdfLoaded || !window.pdfjsLib) {
-        throw new Error(
-          "Thư viện PDF.js chưa được tải xong. Vui lòng đợi một chút và thử lại.",
-        );
-      }
+      const pdfjs = await loadPdfjs();
 
       const fileProcessingPromises = Array.from(pdfFiles).map((file) => {
         return new Promise<string>((resolve, reject) => {
@@ -258,8 +245,7 @@ export const usePdfProcessor = () => {
           fileReader.onload = async function () {
             try {
               const typedarray = new Uint8Array(this.result as ArrayBuffer);
-              const pdf = await window.pdfjsLib.getDocument(typedarray.buffer)
-                .promise;
+              const pdf = await pdfjs.getDocument(typedarray).promise;
 
               let fullText = "";
               for (let i = 1; i <= pdf.numPages; i++) {
@@ -308,7 +294,7 @@ export const usePdfProcessor = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [pdfFiles, pdfLoaded]);
+  }, [pdfFiles]);
 
   // Trích xuất câu hỏi từ văn bản
   const extractQuestionsFromText = useCallback((text: string) => {

@@ -2,16 +2,11 @@
 
 import React from "react";
 import Script from "next/script";
-import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 
-// Add TypeScript declarations for external libraries
+// Giữ lại declare cho docx và saveAs (vẫn dùng CDN)
 declare global {
   interface Window {
-    pdfjsLib: {
-      getDocument: (data: ArrayBufferLike) => { promise: Promise<any> };
-      GlobalWorkerOptions: { workerSrc: string };
-    };
     docx: {
       Document: unknown;
       Packer: unknown;
@@ -27,20 +22,9 @@ export default function CheckExamLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { toast } = useToast();
-
   return (
     <div>
-      {/* External Scripts */}
-      <Script
-        src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"
-        strategy="beforeInteractive"
-        onLoad={() => {
-          if (window.pdfjsLib) {
-            window.pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
-          }
-        }}
-      />
+      {/* PDF.js đã chuyển sang import trực tiếp từ pdfjs-dist, không cần CDN nữa */}
       <Script
         src="https://unpkg.com/docx@7.3.0/build/index.js"
         strategy="afterInteractive"
