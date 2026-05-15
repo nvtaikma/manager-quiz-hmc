@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -39,6 +40,7 @@ import {
   X,
   Check,
   Upload as UploadIcon,
+  ExternalLink,
 } from "lucide-react";
 import { handleImageUpload } from "@/lib/upload";
 
@@ -366,13 +368,6 @@ export default function ReportDetailPage() {
                 </div>
               )}
 
-              {/* Question text snapshot */}
-              {report.questionText && (
-                <div>
-                  <p className="text-sm font-medium mb-1">Nội dung câu hỏi (snapshot)</p>
-                  <p className="text-sm bg-muted/50 p-3 rounded-md">{report.questionText}</p>
-                </div>
-              )}
 
               {/* Ảnh minh chứng */}
               {report.imageUrl && (
@@ -412,6 +407,15 @@ export default function ReportDetailPage() {
                   <span className="text-sm">
                     {report.contactMethod === "zalo" ? "Zalo" : "Facebook"}: {report.contactValue}
                   </span>
+                  <a
+                    href={report.contactMethod === "zalo" ? `https://zalo.me/${report.contactValue}` : report.contactValue}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button variant="outline" size="sm" className="h-6 px-2 text-xs ml-2">
+                      <ExternalLink className="h-3 w-3 mr-1" /> Mở liên kết
+                    </Button>
+                  </a>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />

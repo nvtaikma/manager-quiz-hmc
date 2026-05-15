@@ -26,12 +26,15 @@ class ExamService {
         throw new Error("Không tìm thấy sản phẩm");
       }
 
-      const skip = (page - 1) * limit;
-      const exams = await Exam.find({ productId })
-        .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 });
+      let query = Exam.find({ productId }).sort({ createdAt: -1 });
 
+      // limit=0 nghĩa là lấy tất cả, không phân trang
+      if (limit > 0) {
+        const skip = (page - 1) * limit;
+        query = query.skip(skip).limit(limit);
+      }
+
+      const exams = await query;
       const total = await Exam.countDocuments({ productId });
 
       return {
@@ -40,7 +43,7 @@ class ExamService {
           total,
           page,
           limit,
-          totalPages: Math.ceil(total / limit),
+          totalPages: limit > 0 ? Math.ceil(total / limit) : 1,
         },
       };
     } catch (error) {

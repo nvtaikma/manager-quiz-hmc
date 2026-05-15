@@ -121,12 +121,11 @@ export function ExamManager({ productId }: { productId: string }) {
     }
   }, [productId, toast]);
 
-  // Hàm lấy danh sách đề thi
+  // Hàm lấy danh sách đề thi (không phân trang, lấy tất cả)
   const fetchExams = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetchApi(`/products/${productId}/exams`
-      );
+      const response = await fetchApi(`/products/${productId}/exams?limit=0`);
       if (!response.ok) {
         throw new Error("Không thể tải danh sách đề thi");
       }

@@ -1,26 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -70,6 +62,7 @@ import { useRef } from "react";
 import { API_BASE_URL } from "@/contants/api";
 import { fetchApi } from "@/lib/api";
 import { handleImageUpload } from "@/lib/upload";
+import { Virtuoso } from "react-virtuoso";
 
 interface Answer {
   _id: string;
@@ -123,10 +116,122 @@ const questionSchema = z.object({
   }),
 });
 
+// Props cho QuestionRow memo component
+interface QuestionRowProps {
+  question: Question;
+  onEdit: (question: Question) => void;
+  onDelete: (questionId: string) => void;
+  onCopy: (question: Question) => void;
+  onImagePreview: (url: string) => void;
+  getDifficultyText: (difficulty: string) => string;
+  actionLoading: boolean;
+}
+
+// React.memo component - chỉ re-render khi props thay đổi
+const QuestionRow = React.memo(function QuestionRow({
+  question,
+  onEdit,
+  onDelete,
+  onCopy,
+  onImagePreview,
+  getDifficultyText,
+  actionLoading,
+}: QuestionRowProps) {
+  return (
+    <div
+      className="flex items-center border-b px-4 py-3 hover:bg-muted/50 transition-colors"
+      style={{ minHeight: 60 }}
+    >
+      {/* Câu hỏi */}
+      <div className="flex-1 min-w-0 pr-3">
+        <p className="line-clamp-2 text-sm font-medium">{question.text}</p>
+        {question.image && (
+          <Badge
+            variant="outline"
+            className="mt-1 text-xs gap-1 text-blue-600 border-blue-200 bg-blue-50 cursor-pointer hover:bg-blue-100"
+            onClick={() => onImagePreview(question.image!)}
+          >
+            <ImageIcon className="h-3 w-3" />
+            Có hình ảnh
+          </Badge>
+        )}
+      </div>
+      {/* Đề thi */}
+      <div className="hidden md:block w-32 shrink-0 px-2">
+        <Badge variant="outline">{question.examName}</Badge>
+      </div>
+      {/* Độ khó */}
+      <div className="hidden md:block w-24 shrink-0 px-2">
+        <span
+          className={`px-2 py-1 rounded-full text-xs ${
+            question.difficulty === "easy"
+              ? "bg-green-100 text-green-800"
+              : question.difficulty === "hard"
+                ? "bg-red-100 text-red-800"
+                : "bg-yellow-100 text-yellow-800"
+          }`}
+        >
+          {getDifficultyText(question.difficulty)}
+        </span>
+      </div>
+      {/* Số câu trả lời */}
+      <div className="hidden md:block w-28 shrink-0 px-2 text-sm">
+        {question.answers.length} câu trả lời
+        <br />
+        <span className="text-xs text-muted-foreground">
+          ({question.answers.filter((a) => a.isCorrect).length} đúng)
+        </span>
+      </div>
+      {/* Hành động */}
+      <div className="flex justify-end space-x-2 shrink-0 w-32">
+        <Button
+          variant="outline"
+          size="icon"
+          title="Sao chép"
+          onClick={() => onCopy(question)}
+        >
+          <Copy className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="icon" onClick={() => onEdit(question)}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="icon">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Bạn có chắc chắn?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Hành động này không thể hoàn tác. Điều này sẽ xóa vĩnh viễn câu
+                hỏi khỏi đề thi.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Hủy</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => onDelete(question._id)}
+                disabled={actionLoading}
+              >
+                {actionLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                ) : (
+                  "Xóa"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </div>
+  );
+});
+
 // Component quản lý đề cương
 export function SyllabusManager({ productId }: { productId: string }) {
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -142,7 +247,31 @@ export function SyllabusManager({ productId }: { productId: string }) {
   const router = useRouter();
   const imageFileInputRef = useRef<HTMLInputElement>(null);
 
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  // Tính toán danh sách lọc bằng useMemo thay vì useEffect + setState
+  // để tránh re-render không cần thiết và giảm lag
+  const filteredQuestions = useMemo(() => {
+    let filtered = questions;
+
+    // Filter theo exam
+    if (selectedExamFilter !== "all") {
+      filtered = filtered.filter((q) => q.examId === selectedExamFilter);
+    }
+
+    // Filter theo search term
+    if (debouncedSearchTerm) {
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (q) =>
+          q.text.toLowerCase().includes(searchLower) ||
+          q.examName.toLowerCase().includes(searchLower) ||
+          q.answers.some((a) => a.text.toLowerCase().includes(searchLower)),
+      );
+    }
+
+    return filtered;
+  }, [questions, debouncedSearchTerm, selectedExamFilter]);
 
   const form = useForm<z.infer<typeof questionSchema>>({
     resolver: zodResolver(questionSchema),
@@ -183,9 +312,7 @@ export function SyllabusManager({ productId }: { productId: string }) {
   // Hàm lấy danh sách đề thi
   const fetchExams = useCallback(async () => {
     try {
-      const response = await fetchApi(
-        `/products/${productId}/exams`
-      );
+      const response = await fetchApi(`/products/${productId}/exams?limit=0`);
       if (!response.ok) {
         throw new Error("Không thể tải danh sách đề thi");
       }
@@ -207,9 +334,7 @@ export function SyllabusManager({ productId }: { productId: string }) {
   const fetchAllQuestions = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetchApi(
-        `/products/${productId}/exams`
-      );
+      const response = await fetchApi(`/products/${productId}/exams?limit=0`);
       if (!response.ok) {
         throw new Error("Không thể tải danh sách đề thi");
       }
@@ -218,7 +343,6 @@ export function SyllabusManager({ productId }: { productId: string }) {
 
       if (examList.length === 0) {
         setQuestions([]);
-        setFilteredQuestions([]);
         return;
       }
 
@@ -227,7 +351,7 @@ export function SyllabusManager({ productId }: { productId: string }) {
       for (const exam of examList) {
         try {
           const questionResponse = await fetchApi(
-            `/exams/${exam._id}/questions`
+            `/exams/${exam._id}/questions`,
           );
           if (questionResponse.ok) {
             const questionData = await questionResponse.json();
@@ -235,7 +359,7 @@ export function SyllabusManager({ productId }: { productId: string }) {
               (q: Omit<Question, "examName">) => ({
                 ...q,
                 examName: exam.name,
-              })
+              }),
             );
             allQuestions.push(...examQuestions);
           }
@@ -245,7 +369,6 @@ export function SyllabusManager({ productId }: { productId: string }) {
       }
 
       setQuestions(allQuestions);
-      setFilteredQuestions(allQuestions);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Lỗi không xác định";
@@ -279,28 +402,7 @@ export function SyllabusManager({ productId }: { productId: string }) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Filter câu hỏi theo search term và exam filter
-  useEffect(() => {
-    let filtered = questions;
-
-    // Filter theo exam
-    if (selectedExamFilter !== "all") {
-      filtered = filtered.filter((q) => q.examId === selectedExamFilter);
-    }
-
-    // Filter theo search term
-    if (debouncedSearchTerm) {
-      const searchLower = debouncedSearchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (q) =>
-          q.text.toLowerCase().includes(searchLower) ||
-          q.examName.toLowerCase().includes(searchLower) ||
-          q.answers.some((a) => a.text.toLowerCase().includes(searchLower))
-      );
-    }
-
-    setFilteredQuestions(filtered);
-  }, [questions, debouncedSearchTerm, selectedExamFilter]);
+  // Filter logic đã được chuyển sang useMemo ở trên để tối ưu hiệu năng
 
   // Cập nhật form khi có question được chọn để sửa
   useEffect(() => {
@@ -327,7 +429,7 @@ export function SyllabusManager({ productId }: { productId: string }) {
   // Cập nhật câu hỏi
   const updateQuestion = async (
     questionId: string,
-    values: z.infer<typeof questionSchema>
+    values: z.infer<typeof questionSchema>,
   ) => {
     try {
       setActionLoading(true);
@@ -521,7 +623,10 @@ export function SyllabusManager({ productId }: { productId: string }) {
             <Input
               placeholder="Tìm kiếm câu hỏi..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSearchTerm(val);
+              }}
               className="pl-8 pr-8"
             />
             {searchTerm && (
@@ -557,391 +662,273 @@ export function SyllabusManager({ productId }: { productId: string }) {
           </div>
         </div>
 
-        {/* Questions Table */}
+        {/* Questions List - Virtual Scrolling */}
         <div className="border rounded-md">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[75%] md:w-auto">Câu hỏi</TableHead>
-                <TableHead className="hidden md:table-cell">Đề thi</TableHead>
-                <TableHead className="hidden md:table-cell">Độ khó</TableHead>
-                <TableHead className="hidden md:table-cell">
-                  Số câu trả lời
-                </TableHead>
-                <TableHead className="text-right w-[25%] md:w-auto">
-                  Hành động
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredQuestions.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={2} className="text-center py-8 md:hidden">
-                    {questions.length === 0
-                      ? "Chưa có câu hỏi nào. Hãy thêm câu hỏi vào các đề thi!"
-                      : "Không tìm thấy câu hỏi nào phù hợp với bộ lọc."}
-                  </TableCell>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center py-8 hidden md:table-cell"
-                  >
-                    {questions.length === 0
-                      ? "Chưa có câu hỏi nào. Hãy thêm câu hỏi vào các đề thi!"
-                      : "Không tìm thấy câu hỏi nào phù hợp với bộ lọc."}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredQuestions.map((question) => (
-                  <TableRow key={question._id}>
-                    <TableCell className="font-medium">
-                      <div className="max-w-none md:max-w-md">
-                        <p className="line-clamp-3 md:line-clamp-2">
-                          {question.text}
-                        </p>
-                        {question.image && (
-                          <Badge
-                            variant="outline"
-                            className="mt-1 text-xs gap-1 text-blue-600 border-blue-200 bg-blue-50 cursor-pointer hover:bg-blue-100"
-                            onClick={() => {
-                              setImagePreviewUrl(question.image!);
-                              setShowImagePreview(true);
-                            }}
-                          >
-                            <ImageIcon className="h-3 w-3" />
-                            Có hình ảnh
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Badge variant="outline">{question.examName}</Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          question.difficulty === "easy"
-                            ? "bg-green-100 text-green-800"
-                            : question.difficulty === "hard"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {getDifficultyText(question.difficulty)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {question.answers.length} câu trả lời
-                      <br />
-                      <span className="text-xs text-muted-foreground">
-                        ({question.answers.filter((a) => a.isCorrect).length}{" "}
-                        đúng)
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2">
-                        {/* Nút Sao chép vào clipboard */}
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          title="Sao chép câu hỏi vào clipboard"
-                          onClick={() => copyQuestionToClipboard(question)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Dialog>
-                          <DialogTrigger asChild>
+          {/* Header */}
+          <div className="flex items-center px-4 py-2 border-b bg-muted/30 text-sm font-medium text-muted-foreground">
+            <div className="flex-1">Câu hỏi</div>
+            <div className="hidden md:block w-32 shrink-0 px-2">Đề thi</div>
+            <div className="hidden md:block w-24 shrink-0 px-2">Độ khó</div>
+            <div className="hidden md:block w-28 shrink-0 px-2">
+              Số câu trả lời
+            </div>
+            <div className="w-32 shrink-0 text-right">Hành động</div>
+          </div>
+
+          {filteredQuestions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {questions.length === 0
+                ? "Chưa có câu hỏi nào. Hãy thêm câu hỏi vào các đề thi!"
+                : "Không tìm thấy câu hỏi nào phù hợp với bộ lọc."}
+            </div>
+          ) : (
+            <Virtuoso
+              style={{ height: "70vh" }}
+              totalCount={filteredQuestions.length}
+              overscan={10}
+              itemContent={(index) => {
+                const question = filteredQuestions[index];
+                return (
+                  <QuestionRow
+                    key={question._id}
+                    question={question}
+                    onEdit={(q) => setEditingQuestion(q)}
+                    onDelete={deleteQuestion}
+                    onCopy={copyQuestionToClipboard}
+                    onImagePreview={(url) => {
+                      setImagePreviewUrl(url);
+                      setShowImagePreview(true);
+                    }}
+                    getDifficultyText={getDifficultyText}
+                    actionLoading={actionLoading}
+                  />
+                );
+              }}
+            />
+          )}
+        </div>
+
+        {/* Edit Question Dialog - rendered once, controlled via state */}
+        <Dialog
+          open={!!editingQuestion}
+          onOpenChange={(open) => {
+            if (!open) setEditingQuestion(null);
+          }}
+        >
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Cập nhật câu hỏi</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(
+                  (values) =>
+                    editingQuestion &&
+                    updateQuestion(editingQuestion._id, values),
+                )}
+                className="space-y-6"
+              >
+                <FormField
+                  control={form.control}
+                  name="text"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nội dung câu hỏi</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Nhập nội dung câu hỏi"
+                          className="min-h-[100px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="image"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hình ảnh (URL, không bắt buộc)</FormLabel>
+                      <div className="flex gap-2">
+                        <div className="flex-1 relative">
+                          <FormControl>
+                            <Input placeholder="Nhập URL hình ảnh" {...field} />
+                          </FormControl>
+                          {field.value && (
                             <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-0 top-0"
+                              onClick={() => {
+                                form.setValue("image", "", {
+                                  shouldDirty: true,
+                                });
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={handlePreviewImage}
+                            title="Xem trước ảnh"
+                            disabled={!field.value}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <div className="relative">
+                            <Input
+                              type="file"
+                              accept="image/png, image/jpeg, image/gif, image/webp"
+                              onChange={(e) =>
+                                handleImageUpload(
+                                  e,
+                                  (url) => {
+                                    form.setValue("image", `${url}=rw`, {
+                                      shouldDirty: true,
+                                    });
+                                    form.trigger("image");
+                                  },
+                                  (uploading) => {
+                                    setUploadingImage(uploading);
+                                  },
+                                )
+                              }
+                              className="hidden"
+                              ref={imageFileInputRef}
+                              disabled={uploadingImage}
+                            />
+                            <Button
+                              type="button"
                               variant="outline"
                               size="icon"
-                              onClick={() => setEditingQuestion(question)}
+                              onClick={() => imageFileInputRef.current?.click()}
+                              disabled={uploadingImage}
+                              title="Tải lên ảnh mới"
                             >
-                              <Pencil className="h-4 w-4" />
+                              {uploadingImage ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary"></div>
+                              ) : (
+                                <UploadIcon className="h-4 w-4" />
+                              )}
                             </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>Cập nhật câu hỏi</DialogTitle>
-                            </DialogHeader>
-                            <Form {...form}>
-                              <form
-                                onSubmit={form.handleSubmit((values) =>
-                                  updateQuestion(question._id, values)
-                                )}
-                                className="space-y-6"
-                              >
-                                <FormField
-                                  control={form.control}
-                                  name="text"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Nội dung câu hỏi</FormLabel>
-                                      <FormControl>
-                                        <Textarea
-                                          placeholder="Nhập nội dung câu hỏi"
-                                          className="min-h-[100px]"
-                                          {...field}
-                                        />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-
-                                <FormField
-                                  control={form.control}
-                                  name="image"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>
-                                        Hình ảnh (URL, không bắt buộc)
-                                      </FormLabel>
-                                      <div className="flex gap-2">
-                                        <div className="flex-1 relative">
-                                          <FormControl>
-                                            <Input
-                                              placeholder="Nhập URL hình ảnh"
-                                              {...field}
-                                            />
-                                          </FormControl>
-                                          {field.value && (
-                                            <Button
-                                              type="button"
-                                              variant="ghost"
-                                              size="icon"
-                                              className="absolute right-0 top-0"
-                                              onClick={() => {
-                                                form.setValue("image", "", {
-                                                  shouldDirty: true,
-                                                });
-                                              }}
-                                            >
-                                              <X className="h-4 w-4" />
-                                            </Button>
-                                          )}
-                                        </div>
-                                        <div className="flex gap-1">
-                                          <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="icon"
-                                            onClick={handlePreviewImage}
-                                            title="Xem trước ảnh"
-                                            disabled={!field.value}
-                                          >
-                                            <Eye className="h-4 w-4" />
-                                          </Button>
-                                          <div className="relative">
-                                            <Input
-                                              type="file"
-                                              accept="image/png, image/jpeg, image/gif, image/webp"
-                                              onChange={(e) =>
-                                                handleImageUpload(
-                                                  e,
-                                                  (url) => {
-                                                    form.setValue(
-                                                      "image",
-                                                      `${url}=rw`,
-                                                      {
-                                                        shouldDirty: true,
-                                                      }
-                                                    );
-                                                    form.trigger("image");
-                                                  },
-                                                  (uploading) => {
-                                                    setUploadingImage(
-                                                      uploading
-                                                    );
-                                                  }
-                                                )
-                                              }
-                                              className="hidden"
-                                              ref={imageFileInputRef}
-                                              disabled={uploadingImage}
-                                            />
-                                            <Button
-                                              type="button"
-                                              variant="outline"
-                                              size="icon"
-                                              onClick={() =>
-                                                imageFileInputRef.current?.click()
-                                              }
-                                              disabled={uploadingImage}
-                                              title="Tải lên ảnh mới"
-                                            >
-                                              {uploadingImage ? (
-                                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary"></div>
-                                              ) : (
-                                                <UploadIcon className="h-4 w-4" />
-                                              )}
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <FormMessage />
-                                      {field.value && (
-                                        <p className="text-xs text-muted-foreground mt-1 truncate">
-                                          <ImageIcon className="h-3 w-3 inline-block mr-1" />
-                                          {field.value}
-                                        </p>
-                                      )}
-                                    </FormItem>
-                                  )}
-                                />
-
-                                <FormField
-                                  control={form.control}
-                                  name="difficulty"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Độ khó</FormLabel>
-                                      <Select
-                                        onValueChange={field.onChange}
-                                        defaultValue={field.value}
-                                      >
-                                        <FormControl>
-                                          <SelectTrigger>
-                                            <SelectValue placeholder="Chọn độ khó" />
-                                          </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                          <SelectItem value="easy">
-                                            Dễ
-                                          </SelectItem>
-                                          <SelectItem value="medium">
-                                            Trung bình
-                                          </SelectItem>
-                                          <SelectItem value="hard">
-                                            Khó
-                                          </SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-
-                                <div>
-                                  <FormLabel>Câu trả lời</FormLabel>
-                                  <div className="space-y-4 mt-2">
-                                    {form
-                                      .watch("answers")
-                                      .map((answer, index) => (
-                                        <div
-                                          key={index}
-                                          className="flex items-center gap-3"
-                                        >
-                                          <FormField
-                                            control={form.control}
-                                            name={`answers.${index}.text`}
-                                            render={({ field }) => (
-                                              <FormItem className="flex-1">
-                                                <FormControl>
-                                                  <Input
-                                                    placeholder={`Câu trả lời ${
-                                                      index + 1
-                                                    }`}
-                                                    {...field}
-                                                  />
-                                                </FormControl>
-                                                <FormMessage />
-                                              </FormItem>
-                                            )}
-                                          />
-                                          <Button
-                                            type="button"
-                                            variant={
-                                              answer.isCorrect
-                                                ? "default"
-                                                : "outline"
-                                            }
-                                            size="icon"
-                                            onClick={() =>
-                                              handleAnswerCorrectChange(index)
-                                            }
-                                            className={`transition-all duration-200 ease-in-out ${
-                                              answer.isCorrect
-                                                ? "bg-primary hover:bg-primary/90"
-                                                : "hover:bg-primary/10"
-                                            }`}
-                                            title={
-                                              answer.isCorrect
-                                                ? "Đáp án đúng"
-                                                : "Chọn làm đáp án đúng"
-                                            }
-                                          >
-                                            <Check
-                                              className={`h-4 w-4 ${
-                                                answer.isCorrect
-                                                  ? "text-white scale-125 transition-all"
-                                                  : "text-muted-foreground"
-                                              }`}
-                                            />
-                                          </Button>
-                                        </div>
-                                      ))}
-                                  </div>
-                                  {form.formState.errors.answers && (
-                                    <p className="text-sm font-medium text-destructive mt-2">
-                                      {form.formState.errors.answers.message}
-                                    </p>
-                                  )}
-                                </div>
-
-                                <Button
-                                  type="submit"
-                                  disabled={actionLoading}
-                                  className="w-full"
-                                >
-                                  {actionLoading ? (
-                                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                                  ) : (
-                                    "Cập nhật câu hỏi"
-                                  )}
-                                </Button>
-                              </form>
-                            </Form>
-                          </DialogContent>
-                        </Dialog>
-
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                Bạn có chắc chắn?
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Hành động này không thể hoàn tác. Điều này sẽ
-                                xóa vĩnh viễn câu hỏi khỏi đề thi.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Hủy</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteQuestion(question._id)}
-                                disabled={actionLoading}
-                              >
-                                {actionLoading ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                                ) : (
-                                  "Xóa"
-                                )}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                          </div>
+                        </div>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                      <FormMessage />
+                      {field.value && (
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                          <ImageIcon className="h-3 w-3 inline-block mr-1" />
+                          {field.value}
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="difficulty"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Độ khó</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn độ khó" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="easy">Dễ</SelectItem>
+                          <SelectItem value="medium">Trung bình</SelectItem>
+                          <SelectItem value="hard">Khó</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div>
+                  <FormLabel>Câu trả lời</FormLabel>
+                  <div className="space-y-4 mt-2">
+                    {form.watch("answers").map((answer, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <FormField
+                          control={form.control}
+                          name={`answers.${index}.text`}
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormControl>
+                                <Input
+                                  placeholder={`Câu trả lời ${index + 1}`}
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button
+                          type="button"
+                          variant={answer.isCorrect ? "default" : "outline"}
+                          size="icon"
+                          onClick={() => handleAnswerCorrectChange(index)}
+                          className={`transition-all duration-200 ease-in-out ${
+                            answer.isCorrect
+                              ? "bg-primary hover:bg-primary/90"
+                              : "hover:bg-primary/10"
+                          }`}
+                          title={
+                            answer.isCorrect
+                              ? "Đáp án đúng"
+                              : "Chọn làm đáp án đúng"
+                          }
+                        >
+                          <Check
+                            className={`h-4 w-4 ${
+                              answer.isCorrect
+                                ? "text-white scale-125 transition-all"
+                                : "text-muted-foreground"
+                            }`}
+                          />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  {form.formState.errors.answers && (
+                    <p className="text-sm font-medium text-destructive mt-2">
+                      {form.formState.errors.answers.message}
+                    </p>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="w-full"
+                >
+                  {actionLoading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                  ) : (
+                    "Cập nhật câu hỏi"
+                  )}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
 
         {/* Image Preview Dialog */}
         <Dialog open={showImagePreview} onOpenChange={setShowImagePreview}>
@@ -950,6 +937,7 @@ export function SyllabusManager({ productId }: { productId: string }) {
               <DialogTitle>Xem trước hình ảnh</DialogTitle>
             </DialogHeader>
             <div className="flex justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={imagePreviewUrl}
                 alt="Preview"
