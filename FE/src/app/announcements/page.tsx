@@ -67,6 +67,7 @@ export default function AnnouncementsPage() {
   );
   const [maintenanceDuration, setMaintenanceDuration] = useState(3);
   const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+  const [maintenanceDomain, setMaintenanceDomain] = useState("https://testhmc.site");
   const { toast } = useToast();
 
   const filterForm = useForm<z.infer<typeof filterSchema>>({
@@ -323,7 +324,10 @@ export default function AnnouncementsPage() {
   const handleBroadcastMaintenance = async () => {
     setMaintenanceLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/admin/broadcast-maintenance", {
+      // Bỏ dấu slash ở cuối nếu có để build URL chuẩn xác
+      const baseUrl = maintenanceDomain.endsWith('/') ? maintenanceDomain.slice(0, -1) : maintenanceDomain;
+      
+      const res = await fetch(`${baseUrl}/api/admin/broadcast-maintenance`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -382,6 +386,19 @@ export default function AnnouncementsPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label htmlFor="maintenance-domain">Máy chủ nhận lệnh (Domain)</Label>
+                  <select
+                    id="maintenance-domain"
+                    value={maintenanceDomain}
+                    onChange={(e) => setMaintenanceDomain(e.target.value)}
+                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="https://testhmc.site/">https://testhmc.site/</option>
+                    <option value="http://localhost:5000">http://localhost:5000</option>
+                    <option value="https://test.testhmc.site/">https://test.testhmc.site/</option>
+                  </select>
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="maintenance-msg">Nội dung thông báo</Label>
                   <Textarea
