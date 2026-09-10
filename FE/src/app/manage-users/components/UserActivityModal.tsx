@@ -8,7 +8,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { API_BASE_URL } from "@/contants/api";
 import { fetchApi } from "@/lib/api";
 import {
@@ -263,8 +262,8 @@ export default function UserActivityModal({
                   </div>
 
                   {/* Sessions list */}
-                  <ScrollArea className="max-h-64">
-                    <div className="space-y-2 pr-1">
+                  <div className="max-h-[300px] overflow-y-auto pr-2">
+                    <div className="space-y-2">
                       {selectedDay.sessions.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-4">
                           Không có dữ liệu chi tiết
@@ -279,7 +278,7 @@ export default function UserActivityModal({
                         ))
                       )}
                     </div>
-                  </ScrollArea>
+                  </div>
                 </div>
               )}
             </div>

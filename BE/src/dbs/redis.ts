@@ -5,7 +5,7 @@ dotenv.config();
 
 // dùng redis url thay vì host, port, password
 const redis = new Redis({
-  host: process.env.REDIS_HOST || "157.10.199.146",
+  host: process.env.REDIS_HOST || "103.162.20.159",
   port: Number(process.env.REDIS_PORT) || 6379,
   password: process.env.REDIS_PASSWORD || "nvtaikma02022001a",
   // Retry strategy
