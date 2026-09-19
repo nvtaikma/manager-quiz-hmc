@@ -3,8 +3,8 @@
 // Điều này sẽ hoạt động với bất kỳ domain nào (localhost, manager.testhmc.site, etc.)
 // export const API_BASE_URL = "http://localhost:3000/api";
 // export const API_BASE_URL = "http://160.30.160.161:3000/api";
-// export const API_BASE_URL = "http://157.10.199.146:3000/api";
-export const API_BASE_URL = "https://manager-api.testhmc.site/api";
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://manager-api.testhmc.site/api";
 
 // API Endpoints
 export const API_ENDPOINTS = {

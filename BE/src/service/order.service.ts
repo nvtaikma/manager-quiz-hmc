@@ -455,46 +455,41 @@ class OrderService {
     return result[0] || { totalAmount: 0 };
   }
 
-  async getTotalAmountOrderByDate() {
-    const vietnamTimeOffset = 7 * 60 * 60 * 1000; // Múi giờ +7 (7 giờ * 60 phút * 60 giây * 1000 mili giây)
+  // Helper tính khoảng ngày theo múi giờ Việt Nam (GMT+7)
+  private getVietnamDateRange() {
     const now = new Date();
-    const today = new Date(now.getTime() + vietnamTimeOffset);
-    today.setUTCHours(0, 0, 0, 0); // Đặt thời gian về 00:00:00 theo giờ Việt Nam
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const todayStr = formatter.format(now); // "YYYY-MM-DD"
+    // 00:00:00 hôm nay theo GMT+7
+    const startOfToday = new Date(`${todayStr}T00:00:00+07:00`);
+    const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
+    const startOfYesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
+    // 7 ngày gần nhất (tính cả hôm nay, tức lùi 6 ngày về trước)
+    const startOf7DaysAgo = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000);
 
-    const tomorrow = new Date(today);
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1); // Ngày mai theo giờ Việt Nam
-
-    const result = await Order.aggregate([
-      {
-        $match: {
-          orderDate: {
-            $gte: today, // Từ 00:00:00 ngày hôm nay theo giờ Việt Nam
-            $lt: tomorrow, // Đến trước 00:00:00 ngày mai theo giờ Việt Nam
-          },
-          status: "completed", // Chỉ tính các đơn hàng đã hoàn thành
-        },
-      },
-      { $group: { _id: null, totalAmount: { $sum: "$totalAmount" } } }, // Tính tổng doanh thu
-      { $project: { _id: 0, totalAmount: 1 } }, // Chỉ lấy trường totalAmount
-    ]);
-    return result[0] || { totalAmount: 0 }; // Trả về 0 nếu không có doanh thu
+    return {
+      todayStr,
+      startOfToday,
+      startOfTomorrow,
+      startOfYesterday,
+      startOf7DaysAgo,
+    };
   }
 
-  // tổng thu nhập hôm qua
-  async getTotalAmountYesterday() {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  async getTotalAmountOrderByDate() {
+    const { startOfToday, startOfTomorrow } = this.getVietnamDateRange();
 
     const result = await Order.aggregate([
       {
         $match: {
           orderDate: {
-            $gte: yesterday,
-            $lt: today,
+            $gte: startOfToday,
+            $lt: startOfTomorrow,
           },
           status: "completed",
         },
@@ -505,20 +500,49 @@ class OrderService {
     return result[0] || { totalAmount: 0 };
   }
 
-  async getTotalAmountLast7Days() {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  // tổng thu nhập hôm qua (theo giờ Việt Nam GMT+7)
+  async getTotalAmountYesterday() {
+    const { startOfYesterday, startOfToday } = this.getVietnamDateRange();
 
     const result = await Order.aggregate([
       {
         $match: {
-          orderDate: { $gte: sevenDaysAgo },
+          orderDate: {
+            $gte: startOfYesterday,
+            $lt: startOfToday,
+          },
+          status: "completed",
+        },
+      },
+      { $group: { _id: null, totalAmount: { $sum: "$totalAmount" } } },
+      { $project: { _id: 0, totalAmount: 1 } },
+    ]);
+    return result[0] || { totalAmount: 0 };
+  }
+
+  // Doanh thu 7 ngày gần nhất theo giờ Việt Nam GMT+7
+  async getTotalAmountLast7Days() {
+    const { startOf7DaysAgo, startOfTomorrow } = this.getVietnamDateRange();
+
+    const result = await Order.aggregate([
+      {
+        $match: {
+          orderDate: {
+            $gte: startOf7DaysAgo,
+            $lt: startOfTomorrow,
+          },
           status: "completed",
         },
       },
       {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$orderDate" } },
+          _id: {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: "$orderDate",
+              timezone: "+07:00",
+            },
+          },
           totalAmount: { $sum: "$totalAmount" },
         },
       },
@@ -529,8 +553,10 @@ class OrderService {
     return result;
   }
 
+  // Doanh thu 12 tháng gần nhất theo giờ Việt Nam GMT+7
   async getTotalAmountLast12Months() {
-    const twelveMonthsAgo = new Date();
+    const now = new Date();
+    const twelveMonthsAgo = new Date(now);
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
     const result = await Order.aggregate([
@@ -543,8 +569,8 @@ class OrderService {
       {
         $group: {
           _id: {
-            year: { $year: "$orderDate" },
-            month: { $month: "$orderDate" },
+            year: { $year: { date: "$orderDate", timezone: "+07:00" } },
+            month: { $month: { date: "$orderDate", timezone: "+07:00" } },
           },
           totalAmount: { $sum: "$totalAmount" },
         },
