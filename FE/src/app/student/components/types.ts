@@ -7,7 +7,7 @@ export interface Student {
   _id: string;
   email: string;
   productId: string;
-  status: "completed" | "pending" | "expired";
+  status: "completed" | "pending" | "expired" | "vip";
   product: Product;
 }
 

@@ -28,7 +28,8 @@ class ProductController {
   }
 
   async getListProducts(req: Request, res: Response) {
-    const products = await ProductService.getListProducts();
+    const { status } = req.query as { status?: string };
+    const products = await ProductService.getListProducts(status);
     return res.json({
       message: "Products fetched successfully",
       data: products,

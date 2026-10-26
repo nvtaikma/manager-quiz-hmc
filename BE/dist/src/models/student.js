@@ -7,7 +7,7 @@ const studentSchema = new mongoose_1.Schema({
     orderId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Order" }, // Cột mới để liên kết theo sát đơn hàng
     status: {
         type: String,
-        enum: ["completed", "pending", "expired"],
+        enum: ["completed", "pending", "expired", "vip"],
         default: "pending",
     },
 }, { timestamps: true });

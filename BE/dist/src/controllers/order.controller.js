@@ -26,11 +26,22 @@ class OrderController {
     }
     createOrder(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { customerId, items } = req.body;
-            const order = yield order_service_1.default.createOrder({ customerId, items });
+            const { customerId, items, isVip } = req.body;
+            const order = yield order_service_1.default.createOrder({ customerId, items, isVip });
             return res.status(200).json({
                 message: "Order created successfully",
                 data: order,
+            });
+        });
+    }
+    updateStudentStatusByOrder(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { id } = req.params;
+            const { status } = req.body;
+            const result = yield order_service_1.default.updateStudentStatusByOrderId(id, status);
+            return res.status(200).json({
+                message: "Order student status updated successfully",
+                data: result,
             });
         });
     }

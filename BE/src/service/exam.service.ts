@@ -8,6 +8,7 @@ interface ExamData {
   description?: string;
   duration: number;
   status?: string;
+  isFreePreview?: boolean;
 }
 
 class ExamService {

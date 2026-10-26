@@ -10,6 +10,7 @@ const router = express_1.default.Router();
 router.post("/", (0, asynHandler_1.default)(order_controller_1.default.createOrder));
 router.patch("/:id", (0, asynHandler_1.default)(order_controller_1.default.updateOrder));
 router.patch("/:id/status", (0, asynHandler_1.default)(order_controller_1.default.updateStatusOrder));
+router.patch("/:id/student-status", (0, asynHandler_1.default)(order_controller_1.default.updateStudentStatusByOrder));
 router.get("/list", (0, asynHandler_1.default)(order_controller_1.default.getListOrders));
 router.get("/id/:id", (0, asynHandler_1.default)(order_controller_1.default.getOrder));
 // router.get("/user", asyncHandler(OrderController.getListOrderByUser));

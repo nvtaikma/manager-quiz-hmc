@@ -7,7 +7,8 @@ type ProductRequestBody = {
 type ProductRequest = Request<any, any, ProductRequestBody>;
 
 type UpdateProductRequestBody = {
-  name: string;
+  name?: string;
+  status?: "active" | "inactive" | string;
   image?: string;
   countQuestion?: number;
   documentId?: string;

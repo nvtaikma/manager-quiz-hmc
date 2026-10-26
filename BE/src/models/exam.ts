@@ -29,6 +29,10 @@ const examSchema = new Schema(
       type: Number,
       default: 0,
     },
+    isFreePreview: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

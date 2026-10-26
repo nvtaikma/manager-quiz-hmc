@@ -22,6 +22,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Form,
   FormControl,
@@ -62,6 +64,8 @@ interface Exam {
   description?: string;
   duration: number;
   status: "active" | "inactive" | "draft";
+  isFreePreview?: boolean;
+  count?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,6 +82,7 @@ const examSchema = z.object({
   status: z.enum(["active", "inactive", "draft"], {
     message: "Trạng thái không hợp lệ",
   }),
+  isFreePreview: z.boolean().default(false),
 });
 
 // Component quản lý đề thi (Client Component)
@@ -97,6 +102,7 @@ export function ExamManager({ productId }: { productId: string }) {
       description: "",
       duration: 45,
       status: "active",
+      isFreePreview: false,
     },
   });
 
@@ -158,12 +164,14 @@ export function ExamManager({ productId }: { productId: string }) {
       form.setValue("description", editingExam.description || "");
       form.setValue("duration", editingExam.duration);
       form.setValue("status", editingExam.status);
+      form.setValue("isFreePreview", editingExam.isFreePreview ?? false);
     } else {
       form.reset({
         name: "",
         description: "",
         duration: 45,
         status: "active",
+        isFreePreview: false,
       });
     }
   }, [editingExam, form]);
@@ -483,6 +491,29 @@ export function ExamManager({ productId }: { productId: string }) {
                     )}
                   />
 
+                  <FormField
+                    control={form.control}
+                    name="isFreePreview"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3.5 shadow-sm bg-gray-50/50">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-sm font-semibold cursor-pointer">
+                            Cho phép xem trước miễn phí (isFreePreview)
+                          </FormLabel>
+                          <p className="text-xs text-muted-foreground">
+                            Cho phép học viên đang chờ duyệt (pending) xem trước đề này.
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
                   <Button type="submit" disabled={actionLoading}>
                     {actionLoading ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
@@ -504,6 +535,7 @@ export function ExamManager({ productId }: { productId: string }) {
               <TableRow>
                 <TableHead>Tên đề thi</TableHead>
                 <TableHead>Thời gian (phút)</TableHead>
+                <TableHead>Xem trước</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead>Ngày tạo</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
@@ -512,7 +544,7 @@ export function ExamManager({ productId }: { productId: string }) {
             <TableBody>
               {exams.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4">
+                  <TableCell colSpan={6} className="text-center py-4">
                     Chưa có đề thi nào. Hãy tạo đề thi mới!
                   </TableCell>
                 </TableRow>
@@ -521,6 +553,17 @@ export function ExamManager({ productId }: { productId: string }) {
                   <TableRow key={exam._id}>
                     <TableCell className="font-medium">{exam.name}</TableCell>
                     <TableCell>{exam.duration}</TableCell>
+                    <TableCell>
+                      {exam.isFreePreview ? (
+                        <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200">
+                          Miễn phí
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-gray-500 border-gray-200">
+                          Khóa
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <span
                         className={`px-2 py-1 rounded-full text-xs ${
@@ -655,6 +698,29 @@ export function ExamManager({ productId }: { productId: string }) {
                                         </SelectContent>
                                       </Select>
                                       <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name="isFreePreview"
+                                  render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3.5 shadow-sm bg-gray-50/50">
+                                      <div className="space-y-0.5">
+                                        <FormLabel className="text-sm font-semibold cursor-pointer">
+                                          Cho phép xem trước miễn phí (isFreePreview)
+                                        </FormLabel>
+                                        <p className="text-xs text-muted-foreground">
+                                          Cho phép học viên đang chờ duyệt (pending) xem trước đề này.
+                                        </p>
+                                      </div>
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value}
+                                          onCheckedChange={field.onChange}
+                                        />
+                                      </FormControl>
                                     </FormItem>
                                   )}
                                 />

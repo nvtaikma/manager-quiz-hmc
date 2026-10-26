@@ -20,7 +20,7 @@ class StudentsService {
       const existingCompletedStudent = await Student.findOne({
         email: normalizedEmail,
         productId,
-        status: { $in: ["completed", "pending"] }
+        status: { $in: ["completed", "pending", "vip"] }
       }).lean();
 
       // Nếu đã có và đang completed hoặc pending thì chặn ngay, trả về message lỗi

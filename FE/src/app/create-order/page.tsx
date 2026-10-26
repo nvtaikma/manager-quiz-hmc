@@ -59,6 +59,7 @@ export default function CreateOrder() {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<OrderItem[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [isVip, setIsVip] = useState<boolean>(true);
   const router = useRouter();
   const { toast } = useToast();
   const form = useForm<z.infer<typeof customerSchema>>({
@@ -176,7 +177,7 @@ export default function CreateOrder() {
   async function fetchProducts() {
     setLoading(true);
     try {
-      const response = await fetchApi(`/products/all/full`);
+      const response = await fetchApi(`/products/all/full?status=active`);
       if (!response.ok) {
         throw new Error("Lỗi khi tải danh sách sản phẩm");
       }
@@ -232,6 +233,7 @@ export default function CreateOrder() {
         body: JSON.stringify({
           customerId,
           items: selectedProducts,
+          isVip,
         }),
       });
 
@@ -307,6 +309,29 @@ export default function CreateOrder() {
                     </FormItem>
                   )}
                 />
+
+                <div className="flex items-center space-x-3 rounded-lg border p-3.5 bg-gray-50/70 shadow-sm">
+                  <Checkbox
+                    id="isVip"
+                    checked={isVip}
+                    onCheckedChange={(checked) => setIsVip(!!checked)}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label
+                      htmlFor="isVip"
+                      className="text-sm font-semibold leading-none cursor-pointer select-none"
+                    >
+                      Khách hàng VIP (VIP)
+                    </label>
+                    <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 border border-amber-300">
+                      VIP
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      (Học viên khi tạo đơn sẽ nhận trạng thái VIP thay vì Đang chờ)
+                    </span>
+                  </div>
+                </div>
+
                 <Button type="submit">Tiếp tục</Button>
               </form>
             </Form>
@@ -315,10 +340,19 @@ export default function CreateOrder() {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Chọn sản phẩm</CardTitle>
-            <CardDescription>
-              Chọn các sản phẩm và loại cho đơn hàng.
-            </CardDescription>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <CardTitle>Chọn sản phẩm</CardTitle>
+                <CardDescription>
+                  Chọn các sản phẩm và loại cho đơn hàng.
+                </CardDescription>
+              </div>
+              {isVip && (
+                <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 border border-amber-300 shadow-sm w-fit">
+                  ⭐ Đơn hàng VIP (Học viên mặc định là VIP)
+                </span>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

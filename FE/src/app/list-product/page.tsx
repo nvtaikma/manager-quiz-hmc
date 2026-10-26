@@ -31,6 +31,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -64,7 +72,7 @@ import { handleImageUpload } from "@/lib/upload";
 interface Product {
   _id: string;
   name: string;
-  status?: string;
+  status?: "active" | "inactive" | string;
   image?: string;
   countQuestion?: number;
   documentId?: string;
@@ -72,6 +80,7 @@ interface Product {
 
 const productSchema = z.object({
   name: z.string().min(2, { message: "Tên sản phẩm phải có ít nhất 2 ký tự." }),
+  status: z.enum(["active", "inactive"]).default("active"),
   documentId: z.string().optional(),
   image: z.string().optional(),
 });
@@ -80,6 +89,7 @@ export default function ListProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [filter, setFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -95,6 +105,7 @@ export default function ListProducts() {
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: "",
+      status: "active",
       documentId: "",
       image: "",
     },
@@ -127,9 +138,13 @@ export default function ListProducts() {
 
   useEffect(() => {
     const lowercasedFilter = filter.toLowerCase();
-    const filtered = products.filter((product) =>
-      product.name.toLowerCase().includes(lowercasedFilter)
-    );
+    const filtered = products.filter((product) => {
+      const matchesName = product.name.toLowerCase().includes(lowercasedFilter);
+      const productStatus = product.status || "active";
+      const matchesStatus =
+        statusFilter === "all" ? true : productStatus === statusFilter;
+      return matchesName && matchesStatus;
+    });
     const sorted = [...filtered].sort((a, b) => {
       if (sortOrder === "asc") {
         return a.name.localeCompare(b.name);
@@ -138,13 +153,24 @@ export default function ListProducts() {
       }
     });
     setFilteredProducts(sorted);
-  }, [filter, products, sortOrder]);
+  }, [filter, products, sortOrder, statusFilter]);
 
   useEffect(() => {
     if (editingProduct) {
       form.setValue("name", editingProduct.name);
+      form.setValue(
+        "status",
+        (editingProduct.status as "active" | "inactive") || "active"
+      );
       form.setValue("documentId", editingProduct.documentId || "");
       form.setValue("image", editingProduct.image || "");
+    } else {
+      form.reset({
+        name: "",
+        status: "active",
+        documentId: "",
+        image: "",
+      });
     }
   }, [editingProduct, form]);
 
@@ -225,7 +251,7 @@ export default function ListProducts() {
       await fetchProducts();
       toast({
         title: "Thành công",
-        description: "Đã xóa sản phẩm thành công.",
+        description: "Đã chuyển sản phẩm sang ngừng hoạt động.",
       });
     } catch (error) {
       console.error("Lỗi khi xóa sản phẩm:", error);
@@ -236,6 +262,42 @@ export default function ListProducts() {
       });
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleQuickStatusChange = async (
+    id: string,
+    newStatus: string,
+    productName: string
+  ) => {
+    try {
+      const response = await fetchApi(`/products/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Không thể cập nhật trạng thái môn học");
+      }
+
+      setProducts((prev) =>
+        prev.map((p) => (p._id === id ? { ...p, status: newStatus } : p))
+      );
+
+      toast({
+        title: "Thành công",
+        description:
+          newStatus === "active"
+            ? `Đã kích hoạt môn "${productName}".`
+            : `Đã chuyển môn "${productName}" sang Ngừng hoạt động.`,
+      });
+    } catch (error: any) {
+      console.error("Lỗi khi đổi trạng thái môn học:", error);
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể cập nhật trạng thái môn học.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -272,19 +334,58 @@ export default function ListProducts() {
         <CardTitle className="text-3xl font-bold">Danh sách sản phẩm</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex justify-between items-center mb-6">
-          <div className="relative w-full md:w-64 mr-4">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <Input
-              placeholder="Lọc sản phẩm..."
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="pl-8"
-            />
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Lọc môn học..."
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+
+            {/* Filter trạng thái */}
+            <div className="inline-flex rounded-lg border p-1 bg-gray-50 text-xs">
+              <button
+                type="button"
+                onClick={() => setStatusFilter("all")}
+                className={`px-3 py-1.5 rounded-md font-medium transition-all ${
+                  statusFilter === "all"
+                    ? "bg-white shadow text-gray-900"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Tất cả ({products.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("active")}
+                className={`px-3 py-1.5 rounded-md font-medium transition-all ${
+                  statusFilter === "active"
+                    ? "bg-white shadow text-emerald-700 font-semibold"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Hoạt động ({products.filter((p) => p.status !== "inactive").length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("inactive")}
+                className={`px-3 py-1.5 rounded-md font-medium transition-all ${
+                  statusFilter === "inactive"
+                    ? "bg-white shadow text-rose-700 font-semibold"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Ngừng hoạt động ({products.filter((p) => p.status === "inactive").length})
+              </button>
+            </div>
           </div>
           <Dialog>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={() => setEditingProduct(null)}>
                 <Plus className="mr-2 h-4 w-4" /> Thêm sản phẩm
               </Button>
             </DialogTrigger>
@@ -407,6 +508,41 @@ export default function ListProducts() {
                     )}
                   />
 
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Trạng thái</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Chọn trạng thái" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="active">
+                              <div className="flex items-center gap-2 text-emerald-700">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+                                <span>Hoạt động</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="inactive">
+                              <div className="flex items-center gap-2 text-rose-600">
+                                <span className="h-2 w-2 rounded-full bg-rose-500 inline-block" />
+                                <span>Ngừng hoạt động</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <Button
                     type="submit"
                     disabled={actionLoading || uploadingImage}
@@ -428,30 +564,84 @@ export default function ListProducts() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[80%]">
+                <TableHead>
                   <Button variant="ghost" onClick={toggleSortOrder}>
-                    Tên sản phẩm
+                    Tên sản phẩm / Môn học
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </Button>
                 </TableHead>
+                <TableHead className="w-[180px]">Trạng thái</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts.map((product) => (
-                <TableRow key={product._id}>
-                  <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() =>
-                          router.push(`/product-students/${product._id}`)
+              {filteredProducts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                    Không tìm thấy sản phẩm nào.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredProducts.map((product) => (
+                  <TableRow
+                    key={product._id}
+                    className={
+                      product.status === "inactive"
+                        ? "bg-gray-50/60 text-gray-500"
+                        : ""
+                    }
+                  >
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <span>{product.name}</span>
+                        {product.status === "inactive" && (
+                          <Badge variant="outline" className="text-[11px] text-rose-700 border-rose-300 bg-rose-50">
+                            Ngừng hoạt động
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={product.status || "active"}
+                        onValueChange={(newStatus) =>
+                          handleQuickStatusChange(
+                            product._id,
+                            newStatus,
+                            product.name
+                          )
                         }
                       >
-                        <Users className="h-4 w-4" />
-                      </Button>
+                        <SelectTrigger className="w-[155px] h-8 text-xs font-medium">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">
+                            <div className="flex items-center gap-1.5 text-emerald-700 font-semibold">
+                              <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+                              Hoạt động
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="inactive">
+                            <div className="flex items-center gap-1.5 text-rose-600 font-medium">
+                              <span className="h-2 w-2 rounded-full bg-rose-500 inline-block" />
+                              Ngừng hoạt động
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end space-x-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() =>
+                            router.push(`/product-students/${product._id}`)
+                          }
+                        >
+                          <Users className="h-4 w-4" />
+                        </Button>
                       <Button
                         variant="outline"
                         size="icon"
@@ -613,6 +803,41 @@ export default function ListProducts() {
                                 )}
                               />
 
+                              <FormField
+                                control={form.control}
+                                name="status"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Trạng thái</FormLabel>
+                                    <Select
+                                      value={field.value}
+                                      onValueChange={field.onChange}
+                                    >
+                                      <FormControl>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Chọn trạng thái" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="active">
+                                          <div className="flex items-center gap-2 text-emerald-700">
+                                            <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+                                            <span>Hoạt động</span>
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="inactive">
+                                          <div className="flex items-center gap-2 text-rose-600">
+                                            <span className="h-2 w-2 rounded-full bg-rose-500 inline-block" />
+                                            <span>Ngừng hoạt động</span>
+                                          </div>
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
                               <Button
                                 type="submit"
                                 disabled={actionLoading || uploadingImage}
@@ -663,9 +888,10 @@ export default function ListProducts() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              ))
+            )}
+          </TableBody>
+        </Table>
         </div>
       </CardContent>
 

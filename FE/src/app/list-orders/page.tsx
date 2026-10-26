@@ -90,7 +90,9 @@ function OrdersContent(): ReactNode {
     // Sort nếu cần
     if (sortConfig) {
       result.sort((a, b) => {
-        const compareResult = a[sortConfig.key] < b[sortConfig.key] ? -1 : 1;
+        const valA = a[sortConfig.key] ?? "";
+        const valB = b[sortConfig.key] ?? "";
+        const compareResult = valA < valB ? -1 : 1;
         return sortConfig.direction === "ascending"
           ? compareResult
           : -compareResult;

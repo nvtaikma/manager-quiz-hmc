@@ -23,7 +23,7 @@ class StudentsService {
                 const existingCompletedStudent = yield student_1.default.findOne({
                     email: normalizedEmail,
                     productId,
-                    status: { $in: ["completed", "pending"] }
+                    status: { $in: ["completed", "pending", "vip"] }
                 }).lean();
                 // Nếu đã có và đang completed hoặc pending thì chặn ngay, trả về message lỗi
                 if (existingCompletedStudent) {

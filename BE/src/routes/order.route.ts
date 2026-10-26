@@ -8,6 +8,10 @@ const router = express.Router();
 router.post("/", asyncHandler(OrderController.createOrder));
 router.patch("/:id", asyncHandler(OrderController.updateOrder));
 router.patch("/:id/status", asyncHandler(OrderController.updateStatusOrder));
+router.patch(
+  "/:id/student-status",
+  asyncHandler(OrderController.updateStudentStatusByOrder)
+);
 router.get("/list", asyncHandler(OrderController.getListOrders));
 router.get("/id/:id", asyncHandler(OrderController.getOrder));
 // router.get("/user", asyncHandler(OrderController.getListOrderByUser));

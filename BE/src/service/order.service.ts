@@ -69,7 +69,38 @@ class OrderService {
         },
       },
     ]);
-    return order;
+    if (!order || order.length === 0) {
+      return order;
+    }
+
+    // Lấy danh sách student gắn với orderId này
+    const students = await Student.find({ orderId: id }).lean();
+
+    const mappedOrder = {
+      ...order[0],
+      students: students.map((s) => ({
+        _id: s._id.toString(),
+        productId: s.productId?.toString(),
+        status: s.status,
+        email: s.email,
+      })),
+      products: (order[0].products || []).map((prod: any) => {
+        const matchingStudent = students.find(
+          (s) => s.productId?.toString() === prod._id?.toString()
+        );
+        return {
+          ...prod,
+          student: matchingStudent
+            ? {
+                _id: matchingStudent._id.toString(),
+                status: matchingStudent.status,
+              }
+            : null,
+        };
+      }),
+    };
+
+    return [mappedOrder];
   }
 
   /**  order
@@ -255,9 +286,11 @@ class OrderService {
   async createOrder({
     customerId,
     items,
+    isVip = false,
   }: {
     customerId: string;
     items: { productId: string; selectedType: string }[];
+    isVip?: boolean;
   }) {
     console.log("customerId", customerId);
     const foundCustomer = await Customer.findById(
@@ -278,11 +311,11 @@ class OrderService {
       throw new Error("Some products not found");
     }
 
-    // --- LOGIC MỚI: KIỂM TRA SINH VIÊN ĐÃ SỞ HỮU MÔN HỌC (COMPLETED HOẶC PENDING) CHƯA ---
+    // --- LOGIC MỚI: KIỂM TRA SINH VIÊN ĐÃ SỞ HỮU MÔN HỌC (COMPLETED HOẶC PENDING HOẶC VIP) CHƯA ---
     const existingCompletedStudents = await Student.find({
       email: foundCustomer.email.toLowerCase(),
       productId: { $in: items.map(item => item.productId) },
-      status: { $in: ["completed", "pending"] }
+      status: { $in: ["completed", "pending", "vip"] }
     }).lean();
 
     if (existingCompletedStudents.length > 0) {
@@ -302,18 +335,20 @@ class OrderService {
 
     // Thêm sinh viên vào lớp sau khi đơn hàng được tạo thành công
     try {
+      const initialStudentStatus = isVip ? "vip" : "pending";
       // Thêm sinh viên cho mỗi sản phẩm trong đơn hàng
       const studentCreationPromises = items.map(async (item) =>
         StudentService.createStudent({
           email: foundCustomer.email,
           productId: item.productId,
-          orderId: newOrder._id.toString()
+          orderId: newOrder._id.toString(),
+          status: initialStudentStatus,
         }),
       );
 
       await Promise.all(studentCreationPromises);
       console.log(
-        `Đã thêm học sinh ${foundCustomer.email} vào các lớp học tương ứng`,
+        `Đã thêm học sinh ${foundCustomer.email} (${initialStudentStatus}) vào các lớp học tương ứng`,
       );
     } catch (error) {
       console.error("Lỗi khi thêm học sinh vào lớp:", error);
@@ -380,12 +415,12 @@ class OrderService {
        const foundCustomer = await Customer.findById(orderToUpdate.customerId).lean();
        if (foundCustomer) {
          // Kiểm tra xem sinh viên đã có vé học (do thêm bằng tay hoặc đơn khác) chưa
-         const existingCompletedStudents = await Student.find({
-           email: foundCustomer.email.toLowerCase(),
-           productId: { $in: orderToUpdate.items.map(item => item.productId) },
-           status: { $in: ["completed", "pending"] },
-           orderId: { $ne: id as any } // Bỏ qua vé do chính đơn này tạo ra (nếu vé mang orderId hiện tại vẫn còn sống)
-         }).lean();
+          const existingCompletedStudents = await Student.find({
+            email: foundCustomer.email.toLowerCase(),
+            productId: { $in: orderToUpdate.items.map(item => item.productId) },
+            status: { $in: ["completed", "pending", "vip"] },
+            orderId: { $ne: id as any } // Bỏ qua vé do chính đơn này tạo ra (nếu vé mang orderId hiện tại vẫn còn sống)
+          }).lean();
 
          if (existingCompletedStudents.length > 0) {
            throw new Error("Khôi phục đơn thất bại: Khách hàng đã được cấp một hoặc nhiều khóa học trong đơn này (thêm bằng tay hoặc từ đơn khác).");
@@ -435,6 +470,10 @@ class OrderService {
     }
     
     return orderUpdated;
+  }
+
+  async updateStudentStatusByOrderId(orderId: string, status: string) {
+    return await StudentService.updateStudentStatusByOrderId(orderId, status);
   }
 
   async getCountOrder() {

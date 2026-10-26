@@ -13,11 +13,21 @@ class OrderController {
   }
 
   async createOrder(req: Request, res: Response) {
-    const { customerId, items } = req.body;
-    const order = await OrderService.createOrder({ customerId, items });
+    const { customerId, items, isVip } = req.body;
+    const order = await OrderService.createOrder({ customerId, items, isVip });
     return res.status(200).json({
       message: "Order created successfully",
       data: order,
+    });
+  }
+
+  async updateStudentStatusByOrder(req: Request, res: Response) {
+    const { id } = req.params as { id: string };
+    const { status } = req.body as { status: string };
+    const result = await OrderService.updateStudentStatusByOrderId(id, status);
+    return res.status(200).json({
+      message: "Order student status updated successfully",
+      data: result,
     });
   }
 

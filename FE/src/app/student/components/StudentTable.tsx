@@ -51,9 +51,11 @@ export function StudentTable({ students, isLoading }: StudentTableProps) {
                 key={student._id}
                 className={`${
                   student.status === "completed"
-                    ? "bg-green-100"
+                    ? "bg-green-50/60"
+                    : student.status === "vip"
+                    ? "bg-amber-50/60"
                     : student.status === "expired"
-                    ? "bg-red-100"
+                    ? "bg-red-50/60"
                     : ""
                 }`}
               >
@@ -66,6 +68,8 @@ export function StudentTable({ students, isLoading }: StudentTableProps) {
                     className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                       student.status === "completed"
                         ? "bg-green-100 text-green-800"
+                        : student.status === "vip"
+                        ? "bg-amber-100 text-amber-800 font-bold border border-amber-300"
                         : student.status === "pending"
                         ? "bg-yellow-100 text-yellow-800"
                         : "bg-red-100 text-red-800"
@@ -73,6 +77,8 @@ export function StudentTable({ students, isLoading }: StudentTableProps) {
                   >
                     {student.status === "completed"
                       ? "Hoàn thành"
+                      : student.status === "vip"
+                      ? "⭐ VIP"
                       : student.status === "pending"
                       ? "Đang chờ"
                       : "Hết hạn"}
@@ -83,6 +89,8 @@ export function StudentTable({ students, isLoading }: StudentTableProps) {
                   <div className="text-xs text-muted-foreground mt-1">
                     {student.status === "completed"
                       ? "Hoàn thành"
+                      : student.status === "vip"
+                      ? "⭐ VIP"
                       : student.status === "pending"
                       ? "Đang chờ"
                       : "Hết hạn"}

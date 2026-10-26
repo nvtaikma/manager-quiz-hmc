@@ -83,7 +83,29 @@ class OrderService {
                     },
                 },
             ]);
-            return order;
+            if (!order || order.length === 0) {
+                return order;
+            }
+            // Lấy danh sách student gắn với orderId này
+            const students = yield student_1.default.find({ orderId: id }).lean();
+            const mappedOrder = Object.assign(Object.assign({}, order[0]), { students: students.map((s) => {
+                    var _a;
+                    return ({
+                        _id: s._id.toString(),
+                        productId: (_a = s.productId) === null || _a === void 0 ? void 0 : _a.toString(),
+                        status: s.status,
+                        email: s.email,
+                    });
+                }), products: (order[0].products || []).map((prod) => {
+                    const matchingStudent = students.find((s) => { var _a, _b; return ((_a = s.productId) === null || _a === void 0 ? void 0 : _a.toString()) === ((_b = prod._id) === null || _b === void 0 ? void 0 : _b.toString()); });
+                    return Object.assign(Object.assign({}, prod), { student: matchingStudent
+                            ? {
+                                _id: matchingStudent._id.toString(),
+                                status: matchingStudent.status,
+                            }
+                            : null });
+                }) });
+            return [mappedOrder];
         });
     }
     /**  order
@@ -242,7 +264,7 @@ class OrderService {
         });
     }
     createOrder(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ customerId, items, }) {
+        return __awaiter(this, arguments, void 0, function* ({ customerId, items, isVip = false, }) {
             console.log("customerId", customerId);
             const foundCustomer = yield customers_1.default.findById(new mongoose_1.default.Types.ObjectId(customerId))
                 .select("-__v -createdAt -updatedAt")
@@ -257,11 +279,11 @@ class OrderService {
             if (foundListProductId.length !== items.length) {
                 throw new Error("Some products not found");
             }
-            // --- LOGIC MỚI: KIỂM TRA SINH VIÊN ĐÃ SỞ HỮU MÔN HỌC (COMPLETED HOẶC PENDING) CHƯA ---
+            // --- LOGIC MỚI: KIỂM TRA SINH VIÊN ĐÃ SỞ HỮU MÔN HỌC (COMPLETED HOẶC PENDING HOẶC VIP) CHƯA ---
             const existingCompletedStudents = yield student_1.default.find({
                 email: foundCustomer.email.toLowerCase(),
                 productId: { $in: items.map(item => item.productId) },
-                status: { $in: ["completed", "pending"] }
+                status: { $in: ["completed", "pending", "vip"] }
             }).lean();
             if (existingCompletedStudents.length > 0) {
                 throw new Error("Sinh viên này đã sở hữu hoặc đang chờ duyệt khóa học trong đơn. Vui lòng kiểm tra lại để tránh trùng lặp đơn hàng.");
@@ -278,16 +300,18 @@ class OrderService {
             });
             // Thêm sinh viên vào lớp sau khi đơn hàng được tạo thành công
             try {
+                const initialStudentStatus = isVip ? "vip" : "pending";
                 // Thêm sinh viên cho mỗi sản phẩm trong đơn hàng
                 const studentCreationPromises = items.map((item) => __awaiter(this, void 0, void 0, function* () {
                     return student_service_1.default.createStudent({
                         email: foundCustomer.email,
                         productId: item.productId,
-                        orderId: newOrder._id.toString()
+                        orderId: newOrder._id.toString(),
+                        status: initialStudentStatus,
                     });
                 }));
                 yield Promise.all(studentCreationPromises);
-                console.log(`Đã thêm học sinh ${foundCustomer.email} vào các lớp học tương ứng`);
+                console.log(`Đã thêm học sinh ${foundCustomer.email} (${initialStudentStatus}) vào các lớp học tương ứng`);
             }
             catch (error) {
                 console.error("Lỗi khi thêm học sinh vào lớp:", error);
@@ -342,7 +366,7 @@ class OrderService {
                     const existingCompletedStudents = yield student_1.default.find({
                         email: foundCustomer.email.toLowerCase(),
                         productId: { $in: orderToUpdate.items.map(item => item.productId) },
-                        status: { $in: ["completed", "pending"] },
+                        status: { $in: ["completed", "pending", "vip"] },
                         orderId: { $ne: id } // Bỏ qua vé do chính đơn này tạo ra (nếu vé mang orderId hiện tại vẫn còn sống)
                     }).lean();
                     if (existingCompletedStudents.length > 0) {
@@ -394,6 +418,11 @@ class OrderService {
                 }
             }
             return orderUpdated;
+        });
+    }
+    updateStudentStatusByOrderId(orderId, status) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield student_service_1.default.updateStudentStatusByOrderId(orderId, status);
         });
     }
     getCountOrder() {

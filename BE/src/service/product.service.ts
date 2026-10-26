@@ -46,7 +46,8 @@ class ProductService {
 
   async updateProduct(data: {
     id: string;
-    name: string;
+    name?: string;
+    status?: "active" | "inactive" | string;
     image?: string;
     countQuestion?: number;
     documentId?: string;
@@ -57,9 +58,10 @@ class ProductService {
     return JSON.parse(JSON.stringify(result));
   }
 
-  async getListProducts() {
-    const result = await Product.find({ status: "active" })
-      .select("-__v -createdAt -updatedAt -status")
+  async getListProducts(status?: string) {
+    const query = status && status !== "all" ? { status } : {};
+    const result = await Product.find(query)
+      .select("-__v -createdAt -updatedAt")
       .lean();
     return result;
   }

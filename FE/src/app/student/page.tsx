@@ -24,7 +24,7 @@ export default function StudentPage() {
   );
 }
 
-type StudentStatus = "completed" | "pending" | "expired";
+type StudentStatus = "completed" | "pending" | "vip" | "expired";
 
 function StudentContent(): ReactNode {
   const router = useRouter();
@@ -46,6 +46,7 @@ function StudentContent(): ReactNode {
   > = {
     completed: { label: "Hoàn thành", value: "completed" },
     pending: { label: "Đang chờ", value: "pending" },
+    vip: { label: "VIP", value: "vip" },
     expired: { label: "Hết hạn", value: "expired" },
   };
 
