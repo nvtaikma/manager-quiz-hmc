@@ -1,10 +1,10 @@
 // API Base URL
-// Sử dụng relative URLs cho API routes trong Next.js
-// Điều này sẽ hoạt động với bất kỳ domain nào (localhost, manager.testhmc.site, etc.)
-// export const API_BASE_URL = "http://localhost:3000/api";
-// export const API_BASE_URL = "http://160.30.160.161:3000/api";
+// Tự động dùng domain Production khi build (NODE_ENV=production), dùng localhost:3000 khi chạy npm run dev ở máy
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://manager-api.testhmc.site/api";
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://manager-api.testhmc.site/api"
+    : "http://localhost:3000/api");
 
 // API Endpoints
 export const API_ENDPOINTS = {

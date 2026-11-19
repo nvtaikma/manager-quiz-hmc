@@ -1,8 +1,12 @@
 import mongoose from "mongoose";
 
-// const uri = "mongodb://localhost:27017/google-auth";
-const uri = "mongodb://hmcuser:hmcuser1a123@103.162.20.159:27017/admin";
-// const uri = "mongodb://nvtaikma:nvtaikma@172.17.0.1:27017/admin";
+// Tự động dùng DB Production khi build Docker (NODE_ENV=production), dùng Localhost khi code ở máy
+const PROD_URI = "mongodb://hmcuser:hmcuser1a123@103.162.20.159:27017/admin";
+const LOCAL_URI = "mongodb://localhost:27017/google-auth";
+
+const uri =
+  process.env.MONGODB_URI ||
+  (process.env.NODE_ENV === "production" ? PROD_URI : LOCAL_URI);
 
 async function connectDB() {
   try {
