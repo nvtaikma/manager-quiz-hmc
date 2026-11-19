@@ -69,12 +69,17 @@ class OrderController {
     }
     getListOrders(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { page } = req.query;
-            const { userId, productId } = req.query;
+            const { page, limit } = req.query;
+            const { userId, productId, status, search, startDate, endDate } = req.query;
             const orders = yield order_service_1.default.getListOrder({
-                page,
+                page: page ? Number(page) : 1,
+                limit: limit ? Number(limit) : 15,
                 userId,
                 productId,
+                status,
+                search,
+                startDate,
+                endDate,
             });
             return res.status(200).json({
                 message: "Order list fetched successfully",

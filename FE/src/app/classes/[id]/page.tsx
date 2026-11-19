@@ -67,29 +67,32 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
   // Assuming BE sorts by date.
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/classes">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{className}</h1>
-          <div className="flex items-center gap-2 text-muted-foreground">
-             <p>Chi tiết thời khóa biểu</p>
-             {classMeta?.lastTimetableUpdate && (
-                <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-100">
-                  Cập nhật: {format(new Date(classMeta.lastTimetableUpdate), "HH:mm dd/MM/yyyy", { locale: vi })}
-                </span>
-             )}
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link href="/classes">
+            <Button variant="ghost" size="icon" className="shrink-0">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{className}</h1>
+            <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+               <p>Chi tiết thời khóa biểu</p>
+               {classMeta?.lastTimetableUpdate && (
+                  <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-100">
+                    Cập nhật: {format(new Date(classMeta.lastTimetableUpdate), "HH:mm dd/MM/yyyy", { locale: vi })}
+                  </span>
+               )}
+            </div>
           </div>
         </div>
-        <div className="ml-auto">
-          <Button onClick={() => setIsImportModalOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" /> Import TimeTable
-          </Button>
-        </div>
+        <Button
+          onClick={() => setIsImportModalOpen(true)}
+          className="w-full sm:w-auto text-xs sm:text-sm"
+        >
+          <Upload className="mr-2 h-4 w-4" /> Import TimeTable
+        </Button>
       </div>
 
       {loading ? (

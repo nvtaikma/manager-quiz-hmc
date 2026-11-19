@@ -51,6 +51,7 @@ class QuestionReportService {
         .populate("userId", "name email")
         .populate("examId", "name")
         .populate("productId", "name")
+        .populate("questionId", "text")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -59,12 +60,18 @@ class QuestionReportService {
       this.getStats(),
     ]);
 
+    const getQuestionIdStr = (q: any): string | undefined => {
+      if (!q) return undefined;
+      if (typeof q === "object" && q._id) return q._id.toString();
+      return q.toString();
+    };
+
     // Aggregate: đếm số báo cáo trùng questionId cho mỗi report (nếu có questionId)
     const questionIds = [
       ...new Set(
         reports
-          .filter((r) => r.questionId)
-          .map((r) => r.questionId!.toString())
+          .map((r) => getQuestionIdStr(r.questionId))
+          .filter((id): id is string => Boolean(id))
       ),
     ];
 
@@ -79,12 +86,21 @@ class QuestionReportService {
       );
     }
 
-    const reportsWithDuplicates = reports.map((report) => ({
-      ...report,
-      duplicateCount: report.questionId
-        ? duplicateMap.get(report.questionId.toString()) || 1
-        : 1,
-    }));
+    const reportsWithDuplicates = reports.map((report) => {
+      const qObj = report.questionId as any;
+      const qIdStr = getQuestionIdStr(qObj);
+      const populatedQuestionText =
+        qObj && typeof qObj === "object" && typeof qObj.text === "string"
+          ? qObj.text
+          : undefined;
+
+      return {
+        ...report,
+        questionId: qIdStr,
+        questionText: report.questionText || populatedQuestionText || "",
+        duplicateCount: qIdStr ? duplicateMap.get(qIdStr) || 1 : 1,
+      };
+    });
 
     return {
       reports: reportsWithDuplicates,

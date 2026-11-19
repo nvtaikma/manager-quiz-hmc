@@ -5,6 +5,7 @@ const handleImageUpload = async (
   e: React.ChangeEvent<HTMLInputElement>,
   onSuccess?: (imageUrl: string) => void,
   setUploading?: (uploading: boolean) => void,
+  options?: { watermark?: boolean }
 ) => {
   const files = e.target.files;
   if (!files || files.length === 0) return;
@@ -35,11 +36,16 @@ const handleImageUpload = async (
   try {
     setUploading?.(true);
 
-    // Gửi file qua Backend API để chèn watermark trước khi upload lên cloud
+    const shouldWatermark = options?.watermark !== false;
+    const uploadEndpoint = shouldWatermark
+      ? "/upload/image"
+      : "/upload/thumbnail";
+
+    // Gửi file qua Backend API
     const formData = new FormData();
     formData.append("image", file);
 
-    const response = await fetchApi("/upload/image", {
+    const response = await fetchApi(uploadEndpoint, {
       method: "POST",
       body: formData,
       // Không set Content-Type header – fetchApi đã tự detect FormData
@@ -57,7 +63,9 @@ const handleImageUpload = async (
       onSuccess?.(responseData.data.link);
       toast({
         title: "Thành công",
-        description: "Tải lên ảnh thành công (đã chèn watermark)",
+        description: shouldWatermark
+          ? "Tải lên ảnh thành công (đã chèn watermark)"
+          : "Tải lên ảnh thumbnail thành công",
       });
     } else {
       throw new Error("Không nhận được link ảnh từ server");

@@ -159,20 +159,19 @@ Tổng tiền: ${currentOrder.totalAmount.toLocaleString("vi-VN", {
 Trạng thái: ${currentOrder.status}
 Môn học:
 ${currentOrder.products
-  ?.map(
-    (product) =>
-      `- ${product.name} - ${product.amount.toLocaleString("vi-VN", {
-        style: "currency",
-        currency: "VND",
-      })} ${
-        product.type === "1"
-          ? "(Quizizz)"
-          : product.type === "2"
-          ? "(File)"
-          : "(Azota)"
-      }${product.student?.status ? ` [Học viên: ${product.student.status.toUpperCase()}]` : ""}`
-  )
-  .join("\n")}
+        ?.map(
+          (product) =>
+            `- ${product.name} - ${product.amount.toLocaleString("vi-VN", {
+              style: "currency",
+              currency: "VND",
+            })} ${product.type === "1"
+              ? "(Quizizz)"
+              : product.type === "2"
+                ? "(File)"
+                : "(Azota)"
+            }`
+        )
+        .join("\n")}
     `.trim();
   };
 
@@ -186,7 +185,7 @@ ${currentOrder.products
         toast({
           title: "Thành công",
           description: "Đã sao chép thông tin đơn hàng vào clipboard!",
-          duration: 3000,
+          duration: 500,
         });
       } else {
         // Fallback cho trình duyệt cũ
@@ -203,7 +202,7 @@ ${currentOrder.products
             toast({
               title: "Thành công",
               description: "Đã sao chép thông tin đơn hàng vào clipboard!",
-              duration: 3000,
+              duration: 500,
             });
           } else {
             throw new Error("execCommand failed");
@@ -224,190 +223,189 @@ ${currentOrder.products
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold">Thông tin đơn hàng</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Customer Info */}
-        <div className="flex items-center space-x-4 bg-gray-100 p-4 rounded-lg">
-          <Avatar className="h-16 w-16">
-            <AvatarImage
-              src={currentOrder.customer?.avatar}
-              alt={currentOrder.customer?.name}
-            />
-            <AvatarFallback className="text-lg">
-              {currentOrder.customer?.name?.charAt(0) || "?"}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-semibold text-lg">
-              {currentOrder.customer?.name || "N/A"}
-            </p>
-            <p className="text-sm text-gray-500">
-              {currentOrder.customer?.email || "N/A"}
-            </p>
-          </div>
+    <div className="w-full space-y-3 sm:space-y-4 text-foreground">
+      {/* Customer Info */}
+      <div className="flex items-center space-x-3 bg-gray-100 p-2.5 sm:p-3.5 rounded-lg">
+        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
+          <AvatarImage
+            src={currentOrder.customer?.avatar}
+            alt={currentOrder.customer?.name}
+          />
+          <AvatarFallback className="text-sm sm:text-base font-semibold">
+            {currentOrder.customer?.name?.charAt(0) || "?"}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-sm sm:text-base truncate">
+            {currentOrder.customer?.name || "N/A"}
+          </p>
+          <p className="text-xs sm:text-sm text-gray-500 truncate">
+            {currentOrder.customer?.email || "N/A"}
+          </p>
         </div>
+      </div>
 
-        {/* Order Details */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-gray-500">Mã đơn hàng</p>
-            <p className="font-medium break-all">{currentOrder._id}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Ngày đặt hàng</p>
-            <p className="font-medium">
-              {format(new Date(currentOrder.orderDate), "dd/MM/yyyy HH:mm")}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Tổng tiền</p>
-            <p className="font-medium text-green-600">
-              {currentOrder.totalAmount.toLocaleString("vi-VN", {
-                style: "currency",
-                currency: "VND",
-              })}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Trạng thái</p>
-            <Select
-              value={currentOrder.status}
-              onValueChange={handleOrderStatusChange}
-            >
-              <SelectTrigger className="w-full mt-1">
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Đang chờ</SelectItem>
-                <SelectItem value="completed">Hoàn thành</SelectItem>
-                <SelectItem value="cancelled">Đã hủy</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Order Details */}
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 bg-gray-50/60 p-2.5 sm:p-3 rounded-lg border">
+        <div className="min-w-0">
+          <p className="text-[11px] sm:text-xs text-gray-500">Mã đơn hàng</p>
+          <p className="font-medium text-xs sm:text-sm truncate" title={currentOrder._id}>
+            {currentOrder._id}
+          </p>
         </div>
-
-        {/* Products List */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="font-semibold text-sm">Sản phẩm & Trạng thái học viên:</p>
-            {currentOrder.status !== "completed" &&
-              currentOrder.products &&
-              currentOrder.products.length > 0 &&
-              currentOrder.products.some((p) => p.student) && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isBulkUpdating}
-                  onClick={handleToggleAllVip}
-                  className="h-7 text-xs border-amber-300 text-amber-800 bg-amber-50/50 hover:bg-amber-100"
-                >
-                  {isBulkUpdating ? (
-                    <span className="animate-spin mr-1">⏳</span>
-                  ) : null}
-                  {isAllVip ? "Chuyển tất cả về Chờ" : "⭐ Đặt tất cả thành VIP"}
-                </Button>
-              )}
-          </div>
-          <div className="max-h-[220px] overflow-y-auto pr-1">
-            <ul className="space-y-2">
-              {currentOrder.products?.map((product) => (
-                <li
-                  key={product._id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50 p-2.5 rounded-lg border gap-2"
-                >
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium block truncate">
-                      {product.name}
+          <p className="text-[11px] sm:text-xs text-gray-500">Ngày đặt hàng</p>
+          <p className="font-medium text-xs sm:text-sm">
+            {format(new Date(currentOrder.orderDate), "dd/MM/yyyy HH:mm")}
+          </p>
+        </div>
+        <div>
+          <p className="text-[11px] sm:text-xs text-gray-500">Tổng tiền</p>
+          <p className="font-semibold text-xs sm:text-sm text-green-600">
+            {currentOrder.totalAmount.toLocaleString("vi-VN", {
+              style: "currency",
+              currency: "VND",
+            })}
+          </p>
+        </div>
+        <div>
+          <p className="text-[11px] sm:text-xs text-gray-500">Trạng thái</p>
+          <Select
+            value={currentOrder.status}
+            onValueChange={handleOrderStatusChange}
+          >
+            <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm mt-0.5 bg-white">
+              <SelectValue placeholder="Trạng thái" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Đang chờ</SelectItem>
+              <SelectItem value="completed">Hoàn thành</SelectItem>
+              <SelectItem value="cancelled">Đã hủy</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Products List */}
+      <div>
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <p className="font-semibold text-xs sm:text-sm">
+            Sản phẩm ({currentOrder.products?.length || 0}):
+          </p>
+          {currentOrder.status !== "completed" &&
+            currentOrder.products &&
+            currentOrder.products.length > 0 &&
+            currentOrder.products.some((p) => p.student) && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isBulkUpdating}
+                onClick={handleToggleAllVip}
+                className="h-6 sm:h-7 px-2 text-[11px] sm:text-xs border-amber-300 text-amber-800 bg-amber-50/50 hover:bg-amber-100 shrink-0"
+              >
+                {isBulkUpdating ? (
+                  <span className="animate-spin mr-1">⏳</span>
+                ) : null}
+                {isAllVip ? "Chuyển tất cả về Chờ" : "⭐ Đặt tất cả VIP"}
+              </Button>
+            )}
+        </div>
+        <div className="max-h-[34vh] sm:max-h-[240px] overflow-y-auto pr-1">
+          <ul className="space-y-1.5 sm:space-y-2">
+            {currentOrder.products?.map((product) => (
+              <li
+                key={product._id}
+                className="flex items-center justify-between bg-gray-50 p-2 sm:p-2.5 rounded-lg border gap-2"
+              >
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs sm:text-sm font-medium block line-clamp-1">
+                    {product.name}
+                  </span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="font-semibold text-[11px] sm:text-xs text-green-700">
+                      {product.amount.toLocaleString("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      })}
                     </span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="font-semibold text-xs text-green-700">
-                        {product.amount.toLocaleString("vi-VN", {
-                          style: "currency",
-                          currency: "VND",
-                        })}
-                      </span>
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                        {product.type === "1"
-                          ? "Quizizz"
-                          : product.type === "2"
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                      {product.type === "1"
+                        ? "Quizizz"
+                        : product.type === "2"
                           ? "File"
                           : "Azota"}
-                      </Badge>
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Trạng thái học viên & Thay đổi VIP */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {product.student ? (
+                    <div className="flex items-center gap-1 sm:gap-1.5">
+                      {product.student.status === "vip" ? (
+                        <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 sm:px-2 py-0.5 text-[11px] sm:text-xs font-bold text-amber-800 border border-amber-300">
+                          ⭐ VIP
+                        </span>
+                      ) : product.student.status === "completed" ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-1.5 sm:px-2 py-0.5 text-[11px] sm:text-xs font-medium text-emerald-800 border border-emerald-200">
+                          Hoàn thành
+                        </span>
+                      ) : product.student.status === "expired" ? (
+                        <span className="inline-flex items-center rounded-full bg-rose-100 px-1.5 sm:px-2 py-0.5 text-[11px] sm:text-xs font-medium text-rose-800 border border-rose-200">
+                          Hết hạn
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-yellow-50 px-1.5 sm:px-2 py-0.5 text-[11px] sm:text-xs font-medium text-yellow-800 border border-yellow-200">
+                          Đang chờ
+                        </span>
+                      )}
+
+                      {/* Nút bấm đổi VIP */}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={
+                          product.student.status === "vip"
+                            ? "destructive"
+                            : "outline"
+                        }
+                        disabled={updatingStudentId === product.student._id}
+                        onClick={() =>
+                          toggleStudentVip(
+                            product.student!._id,
+                            product.student!.status,
+                            product.name
+                          )
+                        }
+                        className="h-6 text-[11px] px-1.5 sm:px-2"
+                      >
+                        {updatingStudentId === product.student._id ? (
+                          <span className="animate-spin inline-block mr-1">
+                            ⏳
+                          </span>
+                        ) : null}
+                        {product.student.status === "vip"
+                          ? "Hủy VIP"
+                          : "Đặt VIP"}
+                      </Button>
                     </div>
-                  </div>
-
-                  {/* Trạng thái học viên & Thay đổi VIP */}
-                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                    {product.student ? (
-                      <div className="flex items-center gap-1.5">
-                        {product.student.status === "vip" ? (
-                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 border border-amber-300">
-                            ⭐ VIP
-                          </span>
-                        ) : product.student.status === "completed" ? (
-                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 border border-emerald-200">
-                            Hoàn thành
-                          </span>
-                        ) : product.student.status === "expired" ? (
-                          <span className="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-800 border border-rose-200">
-                            Hết hạn
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-800 border border-yellow-200">
-                            Đang chờ
-                          </span>
-                        )}
-
-                        {/* Nút bấm đổi VIP */}
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={
-                            product.student.status === "vip"
-                              ? "destructive"
-                              : "outline"
-                          }
-                          disabled={updatingStudentId === product.student._id}
-                          onClick={() =>
-                            toggleStudentVip(
-                              product.student!._id,
-                              product.student!.status,
-                              product.name
-                            )
-                          }
-                          className="h-6 text-[11px] px-2"
-                        >
-                          {updatingStudentId === product.student._id ? (
-                            <span className="animate-spin inline-block mr-1">
-                              ⏳
-                            </span>
-                          ) : null}
-                          {product.student.status === "vip"
-                            ? "Hủy VIP"
-                            : "Đặt VIP"}
-                        </Button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground italic">
-                        Chưa có vé
-                      </span>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground italic">
+                      Chưa có vé
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
+      </div>
 
-        {/* Copy Button */}
-        <Button onClick={handleCopyClick} className="w-full">
-          Xuất thông tin chi tiết
-        </Button>
-      </CardContent>
-    </Card>
+      {/* Copy Button */}
+      <Button onClick={handleCopyClick} className="w-full h-9 sm:h-10 text-xs sm:text-sm">
+        Xuất thông tin chi tiết
+      </Button>
+    </div>
   );
 }

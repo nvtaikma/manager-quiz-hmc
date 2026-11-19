@@ -88,7 +88,121 @@ export default function AnnouncementTable({
 
   return (
     <div className="space-y-4">
-      <div className="border rounded-md">
+      {/* Giao diện Mobile (< md): Danh sách thẻ thông báo (Card List) */}
+      <div className="grid grid-cols-1 gap-3 md:hidden">
+        {announcements.length === 0 ? (
+          <div className="text-center py-8 text-gray-500 border rounded-lg text-sm">
+            Không có thông báo nào
+          </div>
+        ) : (
+          announcements.map((announcement) => (
+            <div
+              key={announcement._id}
+              className="rounded-xl border bg-card p-3.5 shadow-sm space-y-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <h4 className="font-semibold text-sm text-foreground leading-snug flex-1 min-w-0 break-words">
+                  {getLocationDisplayName(announcement)}
+                </h4>
+                <Badge
+                  variant={announcement.isActive ? "success" : "destructive"}
+                  className="shrink-0 text-xs"
+                >
+                  {announcement.isActive ? "Hoạt động" : "Tắt"}
+                </Badge>
+              </div>
+
+              <div
+                className="text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-lg border line-clamp-3 break-words"
+                dangerouslySetInnerHTML={{ __html: announcement.message }}
+              />
+
+              <div className="flex items-center justify-between gap-2 pt-2 border-t text-xs text-muted-foreground">
+                <span>
+                  Hết hạn:{" "}
+                  <strong className="text-foreground font-medium">
+                    {announcement.expiresAt
+                      ? formatDate(new Date(announcement.expiresAt))
+                      : "Không có"}
+                  </strong>
+                </span>
+
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant={announcement.isActive ? "outline" : "secondary"}
+                    size="icon"
+                    className="h-8 w-8"
+                    title={
+                      announcement.isActive
+                        ? "Chuyển sang Không hoạt động"
+                        : "Chuyển sang Hoạt động"
+                    }
+                    onClick={() => {
+                      onUpdate(announcement._id, {
+                        location: announcement.location,
+                        message: announcement.message,
+                        priority: announcement.priority,
+                        isActive: !announcement.isActive,
+                        expiresAt: announcement.expiresAt
+                          ? typeof announcement.expiresAt === "string"
+                            ? announcement.expiresAt
+                            : announcement.expiresAt.toISOString()
+                          : undefined,
+                        subjectName: announcement.subjectName,
+                      });
+                    }}
+                  >
+                    {announcement.isActive ? (
+                      <ToggleRight className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <ToggleRight className="h-4 w-4 text-gray-400 rotate-180" />
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onEdit(announcement)}
+                    title="Chỉnh sửa"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-8 w-8 text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="w-[94vw] sm:max-w-lg rounded-lg">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Xóa thông báo</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Bạn có chắc chắn muốn xóa thông báo này? Hành động này
+                          không thể hoàn tác.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Hủy</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => onDelete(announcement._id)}
+                          disabled={isLoading}
+                        >
+                          Xóa
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Giao diện Tablet & Desktop (>= md): Bảng thông báo */}
+      <div className="hidden md:block border rounded-md overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

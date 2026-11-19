@@ -219,7 +219,7 @@ class OrderService {
     getListOrder(options) {
         return __awaiter(this, void 0, void 0, function* () {
             // Thiết lập giá trị mặc định
-            const { userId, productId, page = 1, limit = 15, sort = { orderDate: -1 }, } = options;
+            const { userId, productId, status, search, startDate, endDate, page = 1, limit = 15, sort = { orderDate: -1 }, } = options;
             const skip = (page - 1) * limit;
             let query = {};
             // Xác định query dựa trên tham số đầu vào
@@ -235,6 +235,40 @@ class OrderService {
             }
             if (productId) {
                 query["items.productId"] = productId;
+            }
+            if (status && status !== "all") {
+                query.status = status;
+            }
+            if (startDate || endDate) {
+                query.orderDate = {};
+                if (startDate) {
+                    query.orderDate.$gte = new Date(startDate);
+                }
+                if (endDate) {
+                    query.orderDate.$lte = new Date(endDate);
+                }
+            }
+            if (search && search.trim()) {
+                const cleanSearch = search.trim();
+                const matchedCustomers = yield customers_1.default.find({
+                    $or: [
+                        { name: { $regex: cleanSearch, $options: "i" } },
+                        { email: { $regex: cleanSearch, $options: "i" } },
+                    ],
+                })
+                    .select("_id")
+                    .lean();
+                const customerIds = matchedCustomers.map((c) => c._id);
+                const searchConditions = [{ customerId: { $in: customerIds } }];
+                if (mongoose_1.default.Types.ObjectId.isValid(cleanSearch)) {
+                    searchConditions.push({ _id: new mongoose_1.default.Types.ObjectId(cleanSearch) });
+                }
+                if (query.$and) {
+                    query.$and.push({ $or: searchConditions });
+                }
+                else {
+                    query.$and = [{ $or: searchConditions }];
+                }
             }
             // Thực hiện truy vấn và đếm tổng số
             const [orders, total] = yield Promise.all([

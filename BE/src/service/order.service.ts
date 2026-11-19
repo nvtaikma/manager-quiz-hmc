@@ -215,6 +215,10 @@ class OrderService {
   async getListOrder(options: {
     userId?: string;
     productId?: string;
+    status?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
     page?: number;
     limit?: number;
     sort?: { [key: string]: 1 | -1 };
@@ -223,6 +227,10 @@ class OrderService {
     const {
       userId,
       productId,
+      status,
+      search,
+      startDate,
+      endDate,
       page = 1,
       limit = 15,
       sort = { orderDate: -1 },
@@ -247,6 +255,45 @@ class OrderService {
 
     if (productId) {
       query["items.productId"] = productId;
+    }
+
+    if (status && status !== "all") {
+      query.status = status;
+    }
+
+    if (startDate || endDate) {
+      query.orderDate = {};
+      if (startDate) {
+        query.orderDate.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        query.orderDate.$lte = new Date(endDate);
+      }
+    }
+
+    if (search && search.trim()) {
+      const cleanSearch = search.trim();
+      const matchedCustomers = await Customer.find({
+        $or: [
+          { name: { $regex: cleanSearch, $options: "i" } },
+          { email: { $regex: cleanSearch, $options: "i" } },
+        ],
+      })
+        .select("_id")
+        .lean();
+
+      const customerIds = matchedCustomers.map((c) => c._id);
+      const searchConditions: any[] = [{ customerId: { $in: customerIds } }];
+
+      if (mongoose.Types.ObjectId.isValid(cleanSearch)) {
+        searchConditions.push({ _id: new mongoose.Types.ObjectId(cleanSearch) });
+      }
+
+      if (query.$and) {
+        query.$and.push({ $or: searchConditions });
+      } else {
+        query.$and = [{ $or: searchConditions }];
+      }
     }
 
     // Thực hiện truy vấn và đếm tổng số

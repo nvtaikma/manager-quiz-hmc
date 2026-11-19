@@ -32,7 +32,7 @@ export default function RootLayout({
         suppressHydrationWarning={true}
       >
         <AuthProvider>
-          <div className="flex h-screen bg-gray-100">
+          <div className="flex min-h-screen bg-gray-100">
             <Sidebars content={children} />
           </div>
           <Toaster />

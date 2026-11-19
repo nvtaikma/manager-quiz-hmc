@@ -362,16 +362,16 @@ export default function AnnouncementsPage() {
   };
 
   return (
-    <div className="container mx-auto py-10 space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Quản lý thông báo</h1>
-        <div className="flex gap-2">
+    <div className="container mx-auto py-3 sm:py-8 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold">Quản lý thông báo</h1>
+        <div className="grid grid-cols-2 sm:flex gap-2">
           {/* Nút thông báo bảo trì */}
           <Dialog open={maintenanceOpen} onOpenChange={setMaintenanceOpen}>
             <DialogTrigger asChild>
-              <Button variant="destructive" className="gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                Thông báo bảo trì
+              <Button variant="destructive" className="gap-1.5 sm:gap-2 text-xs sm:text-sm px-2.5 sm:px-4">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span className="truncate">Thông báo bảo trì</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[480px]">
@@ -500,16 +500,16 @@ export default function AnnouncementsPage() {
       )}
 
       <div className="w-full">
-        <div className="flex items-center mb-4 space-x-2">
+        <div className="flex items-center mb-4">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               filterForm.handleSubmit(handleFilter)();
             }}
-            className="flex w-full max-w-sm items-center space-x-2"
+            className="flex w-full sm:max-w-sm items-center space-x-2"
           >
             <Input
-              placeholder="Tìm kiếm theo vị trí, nội dung hoặc môn học..."
+              placeholder="Tìm vị trí, nội dung hoặc môn học..."
               {...filterForm.register("search")}
               onChange={(e) => {
                 const value = e.target.value;
@@ -518,7 +518,7 @@ export default function AnnouncementsPage() {
                 handleFilter({ search: value });
               }}
             />
-            <Button type="submit">Tìm kiếm</Button>
+            <Button type="submit" className="shrink-0">Tìm kiếm</Button>
           </form>
         </div>
 

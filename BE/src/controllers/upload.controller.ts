@@ -47,11 +47,18 @@ class UploadController {
         );
       }
 
-      // 1. Chèn watermark
-      const watermarkedBuffer = await applyWatermark(file.buffer);
+      // 1. Kiểm tra có bỏ qua chèn watermark không (ví dụ: upload ảnh thumbnail môn học)
+      const skipWatermark =
+        req.path.includes("thumbnail") ||
+        req.query.watermark === "false" ||
+        req.body?.watermark === "false";
+
+      const outputBuffer = skipWatermark
+        ? file.buffer
+        : await applyWatermark(file.buffer);
 
       // 2. Chuyển sang base64 để gửi lên Google Apps Script
-      const base64Data = watermarkedBuffer.toString("base64");
+      const base64Data = outputBuffer.toString("base64");
 
       const postData = {
         name: file.originalname,
@@ -81,7 +88,9 @@ class UploadController {
       }
 
       return res.status(200).json({
-        message: "Upload ảnh thành công (đã chèn watermark)",
+        message: skipWatermark
+          ? "Upload ảnh thành công"
+          : "Upload ảnh thành công (đã chèn watermark)",
         data: {
           link: responseData.link,
         },

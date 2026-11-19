@@ -218,21 +218,21 @@ function ManageUsersContent() {
   }
 
   return (
-    <div className="p-2 md:p-6 space-y-4">
-      <h1 className="text-2xl md:text-3xl font-semibold">Quản lý người dùng</h1>
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-        <div className="w-full md:w-1/3 relative">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
+    <div className="p-3 md:p-6 space-y-4">
+      <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold">Quản lý người dùng</h1>
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-stretch sm:items-center">
+        <div className="w-full sm:w-2/3 md:w-1/3 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
           <Input
             placeholder="Tìm kiếm theo tên hoặc email..."
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-8"
+            className="pl-9"
           />
         </div>
-        <div className="flex gap-4 items-center w-full md:w-auto">
+        <div className="flex gap-4 items-center w-full sm:w-auto">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Lọc theo trạng thái" />
             </SelectTrigger>
             <SelectContent>

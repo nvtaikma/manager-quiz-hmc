@@ -404,8 +404,14 @@ export default function ReportDetailPage() {
                 <div className="space-y-2.5 bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-lg border border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{report.userId?.name || "Học viên"}</span>
-                    <span className="text-xs text-muted-foreground">({report.userId?.email || "Không có email"})</span>
+                    {report.userId?.name && (
+                      <span className="text-sm font-medium">{report.userId.name}</span>
+                    )}
+                    {report.userId?.email && (
+                      <span className="text-xs text-muted-foreground">
+                        {report.userId?.name ? `(${report.userId.email})` : report.userId.email}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     {report.contactMethod === "zalo" ? (
@@ -530,8 +536,12 @@ export default function ReportDetailPage() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{report.userId?.name || "N/A"}</span>
-                    <span className="text-xs text-muted-foreground">{report.userId?.email}</span>
+                    {report.userId?.name && (
+                      <span className="text-sm font-medium">{report.userId.name}</span>
+                    )}
+                    {report.userId?.email && (
+                      <span className="text-xs text-muted-foreground">{report.userId.email}</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     {report.contactMethod === "zalo" ? (
@@ -591,7 +601,11 @@ export default function ReportDetailPage() {
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{related.userId?.name || "N/A"}</span>
+                          {(related.userId?.name || related.userId?.email) && (
+                            <span className="text-sm font-medium">
+                              {related.userId?.name || related.userId?.email}
+                            </span>
+                          )}
                           <Badge variant={statusConfig[related.status]?.variant || "default"} className="text-xs">
                             {statusConfig[related.status]?.label || related.status}
                           </Badge>

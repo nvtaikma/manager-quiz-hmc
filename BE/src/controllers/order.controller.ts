@@ -55,15 +55,28 @@ class OrderController {
   }
 
   async getListOrders(req: Request, res: Response) {
-    const { page } = req.query as unknown as { page: number };
-    const { userId, productId } = req.query as unknown as {
-      userId: string;
-      productId: string;
+    const { page, limit } = req.query as unknown as {
+      page?: number;
+      limit?: number;
     };
+    const { userId, productId, status, search, startDate, endDate } =
+      req.query as {
+        userId?: string;
+        productId?: string;
+        status?: string;
+        search?: string;
+        startDate?: string;
+        endDate?: string;
+      };
     const orders = await OrderService.getListOrder({
-      page,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 15,
       userId,
       productId,
+      status,
+      search,
+      startDate,
+      endDate,
     });
     return res.status(200).json({
       message: "Order list fetched successfully",

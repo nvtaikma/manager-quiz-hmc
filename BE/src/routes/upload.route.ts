@@ -26,9 +26,16 @@ const upload = multer({
   },
 });
 
-// POST /api/upload/image - Upload ảnh có watermark
+// POST /api/upload/image - Upload ảnh câu hỏi (mặc định có watermark, hỗ trợ ?watermark=false)
 router.post(
   "/image",
+  upload.single("image"),
+  asyncHandler(uploadController.uploadImage)
+);
+
+// POST /api/upload/thumbnail - Upload ảnh thumbnail môn học (KHÔNG chèn logo/watermark HMC)
+router.post(
+  "/thumbnail",
   upload.single("image"),
   asyncHandler(uploadController.uploadImage)
 );

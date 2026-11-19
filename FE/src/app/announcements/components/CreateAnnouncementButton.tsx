@@ -13,9 +13,12 @@ export function CreateAnnouncementButton({
   className,
 }: CreateAnnouncementButtonProps) {
   return (
-    <Button onClick={onClick} className={className || "w-full"}>
-      <Plus className="h-4 w-4 mr-2" />
-      Tạo thông báo mới
+    <Button
+      onClick={onClick}
+      className={className || "w-full sm:w-auto text-xs sm:text-sm px-2.5 sm:px-4 gap-1.5 sm:gap-2"}
+    >
+      <Plus className="h-4 w-4 shrink-0" />
+      <span className="truncate">Tạo thông báo mới</span>
     </Button>
   );
 }

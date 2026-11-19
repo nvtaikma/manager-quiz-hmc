@@ -89,8 +89,9 @@ export default function ListProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [filter, setFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [actionLoading, setActionLoading] = useState(false);
@@ -328,30 +329,40 @@ export default function ListProducts() {
   }
 
   return (
-    // <Card className="w-full max-w-4xl mx-auto">
     <Card className="w-full mx-auto">
-      <CardHeader>
-        <CardTitle className="text-3xl font-bold">Danh sách sản phẩm</CardTitle>
+      <CardHeader className="p-4 sm:p-6">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-xl sm:text-3xl font-bold">Danh sách sản phẩm</CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleSortOrder}
+            className="md:hidden shrink-0 h-8 text-xs"
+          >
+            Sắp xếp {sortOrder === "asc" ? "A-Z" : "Z-A"}
+            <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+      <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+        <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 sm:gap-4 mb-5">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto">
             <div className="relative w-full sm:w-64">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder="Lọc môn học..."
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                className="pl-8"
+                className="pl-9"
               />
             </div>
 
-            {/* Filter trạng thái */}
-            <div className="inline-flex rounded-lg border p-1 bg-gray-50 text-xs">
+            {/* Filter trạng thái: 3 tab cùng 1 hàng trên mobile */}
+            <div className="grid grid-cols-3 sm:inline-flex rounded-lg border p-1 bg-gray-50 text-[11px] sm:text-xs w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setStatusFilter("all")}
-                className={`px-3 py-1.5 rounded-md font-medium transition-all ${
+                className={`px-1.5 sm:px-3 py-1.5 rounded-md font-medium whitespace-nowrap text-center transition-all ${
                   statusFilter === "all"
                     ? "bg-white shadow text-gray-900"
                     : "text-gray-600 hover:text-gray-900"
@@ -362,7 +373,7 @@ export default function ListProducts() {
               <button
                 type="button"
                 onClick={() => setStatusFilter("active")}
-                className={`px-3 py-1.5 rounded-md font-medium transition-all ${
+                className={`px-1.5 sm:px-3 py-1.5 rounded-md font-medium whitespace-nowrap text-center transition-all ${
                   statusFilter === "active"
                     ? "bg-white shadow text-emerald-700 font-semibold"
                     : "text-gray-600 hover:text-gray-900"
@@ -373,23 +384,23 @@ export default function ListProducts() {
               <button
                 type="button"
                 onClick={() => setStatusFilter("inactive")}
-                className={`px-3 py-1.5 rounded-md font-medium transition-all ${
+                className={`px-1.5 sm:px-3 py-1.5 rounded-md font-medium whitespace-nowrap text-center transition-all ${
                   statusFilter === "inactive"
                     ? "bg-white shadow text-rose-700 font-semibold"
                     : "text-gray-600 hover:text-gray-900"
                 }`}
               >
-                Ngừng hoạt động ({products.filter((p) => p.status === "inactive").length})
+                Ngừng ({products.filter((p) => p.status === "inactive").length})
               </button>
             </div>
           </div>
           <Dialog>
             <DialogTrigger asChild>
-              <Button onClick={() => setEditingProduct(null)}>
+              <Button className="w-full md:w-auto" onClick={() => setEditingProduct(null)}>
                 <Plus className="mr-2 h-4 w-4" /> Thêm sản phẩm
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="w-[94vw] sm:max-w-md p-4 sm:p-6">
               <DialogHeader>
                 <DialogTitle>Thêm sản phẩm mới</DialogTitle>
               </DialogHeader>
@@ -473,7 +484,8 @@ export default function ListProducts() {
                                       },
                                       (uploading) => {
                                         setUploadingImage(uploading);
-                                      }
+                                      },
+                                      { watermark: false }
                                     )
                                   }
                                   className="hidden"
@@ -560,7 +572,121 @@ export default function ListProducts() {
           </Dialog>
         </div>
 
-        <div className="border rounded-md">
+        {/* Giao diện Mobile (< md): Danh sách thẻ sản phẩm (Card List) */}
+        <div className="grid grid-cols-1 gap-3 md:hidden">
+          {filteredProducts.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground border rounded-lg text-sm">
+              Không tìm thấy sản phẩm nào.
+            </div>
+          ) : (
+            filteredProducts.map((product) => (
+              <div
+                key={product._id}
+                className={`rounded-xl border p-3.5 shadow-sm transition-colors ${
+                  product.status === "inactive"
+                    ? "bg-gray-50/80 border-gray-200 text-gray-500"
+                    : "bg-card"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-semibold text-sm text-foreground leading-snug break-words">
+                      {product.name}
+                    </h4>
+                  </div>
+                  <div className="shrink-0">
+                    <Select
+                      value={product.status || "active"}
+                      onValueChange={(newStatus) =>
+                        handleQuickStatusChange(
+                          product._id,
+                          newStatus,
+                          product.name
+                        )
+                      }
+                    >
+                      <SelectTrigger className="w-[135px] h-8 text-xs font-medium bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">
+                          <div className="flex items-center gap-1.5 text-emerald-700 font-semibold">
+                            <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+                            Hoạt động
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="inactive">
+                          <div className="flex items-center gap-1.5 text-rose-600 font-medium">
+                            <span className="h-2 w-2 rounded-full bg-rose-500 inline-block" />
+                            Ngừng hoạt động
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Thanh 5 nút chức năng chia đều trên mobile */}
+                <div className="grid grid-cols-5 gap-2 mt-3 pt-2.5 border-t border-black/5">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-full bg-white"
+                    onClick={() =>
+                      router.push(`/product-students/${product._id}`)
+                    }
+                    title="Danh sách học viên"
+                  >
+                    <Users className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-full bg-white"
+                    onClick={() =>
+                      router.push(`/list-orders?productId=${product._id}`)
+                    }
+                    title="Danh sách đơn hàng"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-full bg-white"
+                    onClick={() =>
+                      router.push(`/product-exams/${product._id}`)
+                    }
+                    title="Xem đề thi"
+                  >
+                    <BookOpen className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-full bg-white"
+                    onClick={() => setEditingProduct(product)}
+                    title="Sửa sản phẩm"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="h-9 w-full"
+                    onClick={() => setDeletingProduct(product)}
+                    title="Xóa sản phẩm"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Giao diện Tablet & Desktop (>= md): Bảng sản phẩm */}
+        <div className="hidden md:block border rounded-md overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -639,260 +765,265 @@ export default function ListProducts() {
                           onClick={() =>
                             router.push(`/product-students/${product._id}`)
                           }
+                          title="Danh sách học viên"
                         >
                           <Users className="h-4 w-4" />
                         </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() =>
-                          router.push(`/list-orders?productId=${product._id}`)
-                        }
-                      >
-                        <ShoppingCart className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() =>
-                          router.push(`/product-exams/${product._id}`)
-                        }
-                        title="Xem đề thi"
-                      >
-                        <BookOpen className="h-4 w-4" />
-                      </Button>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setEditingProduct(product)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Sửa sản phẩm</DialogTitle>
-                          </DialogHeader>
-                          <Form {...form}>
-                            <form
-                              onSubmit={form.handleSubmit((values) =>
-                                updateProduct(product._id, values)
-                              )}
-                              className="space-y-6"
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() =>
+                            router.push(`/list-orders?productId=${product._id}`)
+                          }
+                          title="Danh sách đơn hàng"
+                        >
+                          <ShoppingCart className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() =>
+                            router.push(`/product-exams/${product._id}`)
+                          }
+                          title="Xem đề thi"
+                        >
+                          <BookOpen className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setEditingProduct(product)}
+                          title="Sửa sản phẩm"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => setDeletingProduct(product)}
+                          title="Xóa sản phẩm"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Controlled Edit Product Dialog */}
+        <Dialog
+          open={!!editingProduct}
+          onOpenChange={(open) => !open && setEditingProduct(null)}
+        >
+          <DialogContent className="w-[94vw] sm:max-w-md p-4 sm:p-6">
+            <DialogHeader>
+              <DialogTitle>Sửa sản phẩm</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit((values) => {
+                  if (editingProduct) {
+                    updateProduct(editingProduct._id, values);
+                  }
+                })}
+                className="space-y-5"
+              >
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tên sản phẩm</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nhập tên sản phẩm" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="documentId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Google Docs Document ID</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Nhập ID tài liệu Google Docs"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="image"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Hình ảnh sản phẩm
+                        <span className="text-sm text-muted-foreground ml-2">
+                          (Tùy chọn)
+                        </span>
+                      </FormLabel>
+                      <FormControl>
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="URL hình ảnh hoặc tải lên từ máy tính"
+                            {...field}
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handlePreviewImage}
+                              title="Xem trước ảnh"
+                              disabled={!field.value}
                             >
-                              <FormField
-                                control={form.control}
-                                name="name"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Tên sản phẩm</FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        placeholder="Nhập tên sản phẩm"
-                                        {...field}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
+                              <Eye className="h-4 w-4 mr-1" />
+                              Xem trước
+                            </Button>
+                            <div className="relative">
+                              <Input
+                                type="file"
+                                accept="image/png, image/jpeg, image/gif, image/webp"
+                                onChange={(e) =>
+                                  handleImageUpload(
+                                    e,
+                                    (url) => {
+                                      form.setValue("image", `${url}=rw`, {
+                                        shouldDirty: true,
+                                      });
+                                      form.trigger("image");
+                                    },
+                                    (uploading) => {
+                                      setUploadingImage(uploading);
+                                    },
+                                    { watermark: false }
+                                  )
+                                }
+                                className="hidden"
+                                ref={imageFileInputRef}
+                                disabled={uploadingImage}
                               />
-
-                              <FormField
-                                control={form.control}
-                                name="documentId"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>
-                                      Google Docs Document ID
-                                    </FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        placeholder="Nhập ID tài liệu Google Docs"
-                                        {...field}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-
-                              <FormField
-                                control={form.control}
-                                name="image"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>
-                                      Hình ảnh sản phẩm
-                                      <span className="text-sm text-muted-foreground ml-2">
-                                        (Tùy chọn)
-                                      </span>
-                                    </FormLabel>
-                                    <FormControl>
-                                      <div className="space-y-2">
-                                        <Input
-                                          placeholder="URL hình ảnh hoặc tải lên từ máy tính"
-                                          {...field}
-                                        />
-                                        <div className="flex gap-2">
-                                          <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handlePreviewImage}
-                                            title="Xem trước ảnh"
-                                            disabled={!field.value}
-                                          >
-                                            <Eye className="h-4 w-4 mr-1" />
-                                            Xem trước
-                                          </Button>
-                                          <div className="relative">
-                                            <Input
-                                              type="file"
-                                              accept="image/png, image/jpeg, image/gif, image/webp"
-                                              onChange={(e) =>
-                                                handleImageUpload(
-                                                  e,
-                                                  (url) => {
-                                                    form.setValue(
-                                                      "image",
-                                                      `${url}=rw`,
-                                                      {
-                                                        shouldDirty: true,
-                                                      }
-                                                    );
-                                                    form.trigger("image");
-                                                  },
-                                                  (uploading) => {
-                                                    setUploadingImage(
-                                                      uploading
-                                                    );
-                                                  }
-                                                )
-                                              }
-                                              className="hidden"
-                                              ref={imageFileInputRef}
-                                              disabled={uploadingImage}
-                                            />
-                                            <Button
-                                              type="button"
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() =>
-                                                imageFileInputRef.current?.click()
-                                              }
-                                              disabled={uploadingImage}
-                                              title="Tải lên ảnh mới"
-                                            >
-                                              {uploadingImage ? (
-                                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary"></div>
-                                              ) : (
-                                                <>
-                                                  <UploadIcon className="h-4 w-4 mr-1" />
-                                                  Tải lên
-                                                </>
-                                              )}
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-
-                              <FormField
-                                control={form.control}
-                                name="status"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Trạng thái</FormLabel>
-                                    <Select
-                                      value={field.value}
-                                      onValueChange={field.onChange}
-                                    >
-                                      <FormControl>
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Chọn trạng thái" />
-                                        </SelectTrigger>
-                                      </FormControl>
-                                      <SelectContent>
-                                        <SelectItem value="active">
-                                          <div className="flex items-center gap-2 text-emerald-700">
-                                            <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-                                            <span>Hoạt động</span>
-                                          </div>
-                                        </SelectItem>
-                                        <SelectItem value="inactive">
-                                          <div className="flex items-center gap-2 text-rose-600">
-                                            <span className="h-2 w-2 rounded-full bg-rose-500 inline-block" />
-                                            <span>Ngừng hoạt động</span>
-                                          </div>
-                                        </SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-
                               <Button
-                                type="submit"
-                                disabled={actionLoading || uploadingImage}
-                                className="w-full"
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => imageFileInputRef.current?.click()}
+                                disabled={uploadingImage}
+                                title="Tải lên ảnh mới"
                               >
-                                {actionLoading ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                                {uploadingImage ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary"></div>
                                 ) : (
-                                  "Cập nhật sản phẩm"
+                                  <>
+                                    <UploadIcon className="h-4 w-4 mr-1" />
+                                    Tải lên
+                                  </>
                                 )}
                               </Button>
-                            </form>
-                          </Form>
-                        </DialogContent>
-                      </Dialog>
+                            </div>
+                          </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Bạn có chắc chắn?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Hành động này không thể hoàn tác. Điều này sẽ xóa
-                              vĩnh viễn sản phẩm.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Hủy</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteProduct(product._id)}
-                              disabled={actionLoading}
-                            >
-                              {actionLoading ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                              ) : (
-                                "Xóa"
-                              )}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        </div>
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Trạng thái</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn trạng thái" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">
+                            <div className="flex items-center gap-2 text-emerald-700">
+                              <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+                              <span>Hoạt động</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="inactive">
+                            <div className="flex items-center gap-2 text-rose-600">
+                              <span className="h-2 w-2 rounded-full bg-rose-500 inline-block" />
+                              <span>Ngừng hoạt động</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button
+                  type="submit"
+                  disabled={actionLoading || uploadingImage}
+                  className="w-full"
+                >
+                  {actionLoading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                  ) : (
+                    "Cập nhật sản phẩm"
+                  )}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Controlled Delete Product AlertDialog */}
+        <AlertDialog
+          open={!!deletingProduct}
+          onOpenChange={(open) => !open && setDeletingProduct(null)}
+        >
+          <AlertDialogContent className="w-[94vw] sm:max-w-lg rounded-lg">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Bạn có chắc chắn?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Hành động này sẽ chuyển sản phẩm &quot;{deletingProduct?.name}&quot; sang trạng thái ngừng hoạt động.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Hủy</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (deletingProduct) {
+                    deleteProduct(deletingProduct._id);
+                    setDeletingProduct(null);
+                  }
+                }}
+                disabled={actionLoading}
+              >
+                {actionLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                ) : (
+                  "Xóa"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
 
       {/* Image Preview Dialog */}

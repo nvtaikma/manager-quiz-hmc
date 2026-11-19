@@ -191,17 +191,22 @@ export function OrderTable({
                           Chi tiết
                         </Button>
                       </DialogTrigger>
-                      <DialogContent aria-describedby="order-details-description">
-                        <DialogTitle>Chi tiết đơn hàng</DialogTitle>
+                      <DialogContent
+                        aria-describedby="order-details-description"
+                        className="w-[94vw] sm:max-w-lg max-h-[88vh] flex flex-col p-3.5 sm:p-5 gap-2.5 sm:gap-3"
+                      >
+                        <DialogTitle className="text-base sm:text-lg font-bold pr-6">
+                          Chi tiết đơn hàng
+                        </DialogTitle>
                         <DialogDescription
                           id="order-details-description"
                           className="sr-only"
                         >
                           Thông tin chi tiết về đơn hàng
                         </DialogDescription>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-sm text-muted-foreground flex-1 overflow-y-auto">
                           {detailLoading ? (
-                            <div className="flex items-center justify-center p-4">
+                            <div className="flex items-center justify-center p-6">
                               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
                             </div>
                           ) : (

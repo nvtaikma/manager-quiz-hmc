@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { usePathname } from "next/navigation"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -68,6 +69,12 @@ const SidebarProvider = React.forwardRef<
   ) => {
     const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
+    const pathname = usePathname()
+
+    React.useEffect(() => {
+      setOpenMobile(false)
+      window.scrollTo(0, 0)
+    }, [pathname])
 
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
@@ -205,7 +212,17 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
-            <div className="flex h-full w-full flex-col">{children}</div>
+            <div
+              className="flex h-full w-full flex-col"
+              onClick={(e) => {
+                const target = e.target as HTMLElement
+                if (target.closest("a")) {
+                  setOpenMobile(false)
+                }
+              }}
+            >
+              {children}
+            </div>
           </SheetContent>
         </Sheet>
       )

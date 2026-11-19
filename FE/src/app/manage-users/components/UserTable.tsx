@@ -278,165 +278,297 @@ export function UserTable({
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[100px]">Ảnh đại diện</TableHead>
-            <TableHead>Tên</TableHead>
-            <TableHead className="hidden md:table-cell">Email</TableHead>
-            <TableHead>Trạng thái</TableHead>
-            <TableHead>Hành động</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {users.map((user) => (
-            <TableRow
-              key={user._id}
-              className={
-                user.status === "active"
-                  ? "bg-green-50"
-                  : user.status === "inactive"
-                  ? "bg-red-50"
-                  : ""
-              }
-            >
-              <TableCell>
-                <Avatar>
+    <div>
+      {/* Giao diện Mobile (< md): Hiển thị dạng danh sách thẻ (Card List) chống tràn ngang */}
+      <div className="grid grid-cols-1 gap-3 md:hidden">
+        {users.map((user) => (
+          <div
+            key={user._id}
+            className={`rounded-xl border p-3.5 shadow-sm transition-colors ${
+              user.status === "active"
+                ? "bg-green-50/60 border-green-200"
+                : user.status === "inactive"
+                ? "bg-red-50/60 border-red-200"
+                : "bg-card"
+            }`}
+          >
+            {/* Hàng trên: Avatar + Tên/Email + Chọn trạng thái */}
+            <div className="flex items-start justify-between gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <Avatar className="h-10 w-10 shrink-0 border">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                  <AvatarFallback>{user.name?.charAt(0) || "U"}</AvatarFallback>
                 </Avatar>
-              </TableCell>
-              <TableCell className="font-medium">
-                <div>{user.name}</div>
-                <div className="text-sm text-muted-foreground md:hidden">
-                  {user.email}
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm text-foreground truncate">
+                    {user.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user.email}
+                  </p>
                 </div>
-              </TableCell>
-              <TableCell className="hidden md:table-cell">
-                {user.email}
-              </TableCell>
-              <TableCell>
-                <div className="flex space-x-2">
-                  <Select
-                    value={user.status}
-                    onValueChange={(value) => updateUserStatus(user._id, value)}
-                  >
-                    <SelectTrigger className="w-[37px] md:w-[120px]">
-                      <SelectValue placeholder="Trạng thái" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Hoạt động</SelectItem>
-                      <SelectItem value="inactive">Không hoạt động</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex space-x-1 md:space-x-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() =>
-                      router.push(`/list-orders?userId=${user._id}`)
-                    }
-                    title="Xem đơn hàng"
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleViewSessions(user)}
-                    title="Xem phiên đăng nhập"
-                  >
-                    <Monitor className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
+              </div>
+
+              <div className="shrink-0">
+                <Select
+                  value={user.status}
+                  onValueChange={(value) => updateUserStatus(user._id, value)}
+                >
+                  <SelectTrigger className="h-8 w-[126px] text-xs bg-white">
+                    <SelectValue placeholder="Trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Hoạt động</SelectItem>
+                    <SelectItem value="inactive">Không hoạt động</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Hàng dưới: Thanh 7 nút công cụ chia đều vừa khung mobile */}
+            <div className="grid grid-cols-7 gap-1.5 mt-3 pt-2.5 border-t border-black/5">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-full bg-white"
+                onClick={() => router.push(`/list-orders?userId=${user._id}`)}
+                title="Xem đơn hàng"
+              >
+                <ShoppingCart className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-full bg-white"
+                onClick={() => handleViewSessions(user)}
+                title="Xem phiên đăng nhập"
+              >
+                <Monitor className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-full bg-white"
+                onClick={() => {
+                  setSelectedUserForCourses(user);
+                  setShowCoursesModal(true);
+                }}
+                title="Xem khóa học đã sở hữu"
+              >
+                <BookMarked className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-full bg-white"
+                onClick={() => handleViewExamHistory(user)}
+                title="Xem lịch sử thi"
+              >
+                <FileText className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-full bg-white"
+                onClick={() => handleViewPracticeHistory(user)}
+                title="Xem lịch sử thi thử"
+              >
+                <BookOpen className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-full bg-white"
+                onClick={() => {
+                  setSelectedUserForActivity(user);
+                  setShowActivityModal(true);
+                }}
+                title="Xem lịch sử hoạt động"
+              >
+                <Activity className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-full bg-white"
+                onClick={() => {
+                  setEditingUser(user);
+                  setEditName(user.name);
+                  setEditEmail(user.email);
+                }}
+                title="Chỉnh sửa thông tin"
+              >
+                <EditIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Giao diện Tablet & Desktop (>= md): Hiển thị dạng Bảng */}
+      <div className="hidden md:block rounded-md border overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[80px]">Ảnh đại diện</TableHead>
+              <TableHead>Tên</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Trạng thái</TableHead>
+              <TableHead>Hành động</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.map((user) => (
+              <TableRow
+                key={user._id}
+                className={
+                  user.status === "active"
+                    ? "bg-green-50"
+                    : user.status === "inactive"
+                    ? "bg-red-50"
+                    : ""
+                }
+              >
+                <TableCell>
+                  <Avatar>
+                    <AvatarImage src={user.avatar} alt={user.name} />
+                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                </TableCell>
+                <TableCell className="font-medium">
+                  <div>{user.name}</div>
+                </TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>
+                  <div className="flex space-x-2">
+                    <Select
+                      value={user.status}
+                      onValueChange={(value) => updateUserStatus(user._id, value)}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Trạng thái" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Hoạt động</SelectItem>
+                        <SelectItem value="inactive">Không hoạt động</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex space-x-1.5 lg:space-x-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() =>
+                        router.push(`/list-orders?userId=${user._id}`)
+                      }
+                      title="Xem đơn hàng"
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleViewSessions(user)}
+                      title="Xem phiên đăng nhập"
+                    >
+                      <Monitor className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
                         setSelectedUserForCourses(user);
                         setShowCoursesModal(true);
-                    }}
-                    title="Xem khóa học đã sở hữu"
-                  >
-                    <BookMarked className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleViewExamHistory(user)}
-                    title="Xem lịch sử thi"
-                  >
-                    <FileText className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleViewPracticeHistory(user)}
-                    title="Xem lịch sử thi thử"
-                  >
-                    <BookOpen className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
-                      setSelectedUserForActivity(user);
-                      setShowActivityModal(true);
-                    }}
-                    title="Xem lịch sử hoạt động"
-                  >
-                    <Activity className="h-4 w-4" />
-                  </Button>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setEditingUser(user);
-                          setEditName(user.name);
-                          setEditEmail(user.email);
-                        }}
-                      >
-                        <EditIcon className="w-4 h-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>
-                          Chỉnh sửa thông tin người dùng
-                        </DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <Input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          placeholder="Tên"
-                        />
-                        <Input
-                          value={editEmail}
-                          onChange={(e) => setEditEmail(e.target.value)}
-                          placeholder="Email"
-                        />
-                        <Button
-                          onClick={() => {
-                            updateUserInfo(user._id, editName, editEmail);
-                            setEditingUser(null);
-                          }}
-                        >
-                          Lưu thay đổi
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                      }}
+                      title="Xem khóa học đã sở hữu"
+                    >
+                      <BookMarked className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleViewExamHistory(user)}
+                      title="Xem lịch sử thi"
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleViewPracticeHistory(user)}
+                      title="Xem lịch sử thi thử"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedUserForActivity(user);
+                        setShowActivityModal(true);
+                      }}
+                      title="Xem lịch sử hoạt động"
+                    >
+                      <Activity className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        setEditingUser(user);
+                        setEditName(user.name);
+                        setEditEmail(user.email);
+                      }}
+                      title="Chỉnh sửa thông tin"
+                    >
+                      <EditIcon className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Edit User Info Modal */}
+      <Dialog
+        open={!!editingUser}
+        onOpenChange={(open) => !open && setEditingUser(null)}
+      >
+        <DialogContent className="w-[94vw] sm:max-w-md p-4 sm:p-6">
+          <DialogHeader className="pr-6">
+            <DialogTitle className="text-base sm:text-lg text-left">
+              Chỉnh sửa thông tin người dùng
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="Tên"
+            />
+            <Input
+              value={editEmail}
+              onChange={(e) => setEditEmail(e.target.value)}
+              placeholder="Email"
+            />
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => {
+                if (editingUser) {
+                  updateUserInfo(editingUser._id, editName, editEmail);
+                  setEditingUser(null);
+                }
+              }}
+            >
+              Lưu thay đổi
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <UserSessionModal 
         isOpen={showSessionsModal}
@@ -464,29 +596,29 @@ export function UserTable({
         open={showExamHistoryModal}
         onOpenChange={setShowExamHistoryModal}
       >
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Lịch sử thi - {selectedUserForHistory?.name}
+        <DialogContent className="w-[94vw] sm:max-w-4xl max-h-[88vh] flex flex-col p-4 sm:p-6">
+          <DialogHeader className="pr-6">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg text-left">
+              <FileText className="h-5 w-5 shrink-0" />
+              <span className="truncate">Lịch sử thi - {selectedUserForHistory?.name}</span>
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[500px]">
+          <ScrollArea className="max-h-[68vh] sm:max-h-[500px] w-full">
             {examHistoryLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
               </div>
             ) : examHistoryData.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-muted-foreground text-sm">
                 Không có lịch sử thi nào
               </div>
             ) : (
-              <div className="space-y-4 pr-4">
+              <div className="space-y-3 sm:space-y-4 pr-2 sm:pr-4">
                 {examHistoryData.map((exam, index) => (
-                  <div key={index} className="border rounded-lg p-4">
+                  <div key={index} className="border rounded-lg p-3 sm:p-4">
                     <div className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <h4 className="font-medium text-lg leading-tight">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-medium text-sm sm:text-lg leading-tight flex-1 min-w-0 break-words">
                           {exam.examName.trim()}
                         </h4>
                         <Badge
@@ -495,47 +627,47 @@ export function UserTable({
                               ? "default"
                               : "secondary"
                           }
-                          className="ml-2"
+                          className="shrink-0 text-xs"
                         >
                           {exam.examType}
                         </Badge>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center p-3 bg-green-50 rounded-lg">
-                          <div className="text-2xl font-bold text-green-600">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+                        <div className="text-center p-2.5 sm:p-3 bg-green-50 rounded-lg">
+                          <div className="text-lg sm:text-2xl font-bold text-green-600">
                             {exam.score}
                           </div>
-                          <div className="text-xs text-green-600 font-medium">
+                          <div className="text-[11px] sm:text-xs text-green-600 font-medium">
                             Điểm số
                           </div>
                         </div>
 
-                        <div className="text-center p-3 bg-blue-50 rounded-lg">
-                          <div className="text-2xl font-bold text-blue-600">
+                        <div className="text-center p-2.5 sm:p-3 bg-blue-50 rounded-lg">
+                          <div className="text-lg sm:text-2xl font-bold text-blue-600">
                             {exam.totalQuestions}
                           </div>
-                          <div className="text-xs text-blue-600 font-medium">
+                          <div className="text-[11px] sm:text-xs text-blue-600 font-medium">
                             Tổng câu hỏi
                           </div>
                         </div>
 
-                        <div className="text-center p-3 bg-orange-50 rounded-lg">
-                          <div className="text-2xl font-bold text-orange-600 flex items-center justify-center gap-1">
-                            <Clock className="h-4 w-4" />
+                        <div className="text-center p-2.5 sm:p-3 bg-orange-50 rounded-lg">
+                          <div className="text-lg sm:text-2xl font-bold text-orange-600 flex items-center justify-center gap-1">
+                            <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
                             {formatDuration(exam.duration)}
                           </div>
-                          <div className="text-xs text-orange-600 font-medium">
+                          <div className="text-[11px] sm:text-xs text-orange-600 font-medium">
                             Thời gian
                           </div>
                         </div>
 
-                        <div className="text-center p-3 bg-purple-50 rounded-lg">
-                          <div className="text-sm font-bold text-purple-600 flex items-center justify-center gap-1">
-                            <Calendar className="h-4 w-4" />
+                        <div className="text-center p-2.5 sm:p-3 bg-amber-50 rounded-lg">
+                          <div className="text-xs sm:text-sm font-bold text-amber-700 flex items-center justify-center gap-1">
+                            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
                             {formatDate(exam.createdAt).split(" ")[0]}
                           </div>
-                          <div className="text-xs text-purple-600 font-medium">
+                          <div className="text-[11px] sm:text-xs text-amber-700 font-medium">
                             Ngày thi
                           </div>
                         </div>
@@ -559,33 +691,33 @@ export function UserTable({
         open={showPracticeHistoryModal}
         onOpenChange={setShowPracticeHistoryModal}
       >
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              Lịch sử thi thử - {selectedUserForPracticeHistory?.name}
+        <DialogContent className="w-[94vw] sm:max-w-4xl max-h-[88vh] flex flex-col p-4 sm:p-6">
+          <DialogHeader className="pr-6">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg text-left">
+              <BookOpen className="h-5 w-5 shrink-0" />
+              <span className="truncate">Lịch sử thi thử - {selectedUserForPracticeHistory?.name}</span>
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[500px]">
+          <ScrollArea className="max-h-[68vh] sm:max-h-[500px] w-full">
             {practiceHistoryLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
               </div>
             ) : practiceHistoryData.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-muted-foreground text-sm">
                 Không có lịch sử thi thử nào
               </div>
             ) : (
-              <div className="space-y-4 pr-4">
+              <div className="space-y-3 sm:space-y-4 pr-2 sm:pr-4">
                 {practiceHistoryData.map((practice, index) => (
-                  <div key={index} className="border rounded-lg p-4">
+                  <div key={index} className="border rounded-lg p-3 sm:p-4">
                     <div className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <h4 className="font-medium text-lg leading-tight">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                        <h4 className="font-medium text-sm sm:text-lg leading-tight flex-1 min-w-0 break-words">
                           {practice.courseName.trim()}
                         </h4>
-                        <div className="flex gap-2">
-                          <Badge variant="outline">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2 shrink-0">
+                          <Badge variant="outline" className="text-xs">
                             {practice.practiceType}
                           </Badge>
                           <Badge
@@ -594,6 +726,7 @@ export function UserTable({
                                 ? "default"
                                 : "secondary"
                             }
+                            className="text-xs"
                           >
                             {practice.status === "completed"
                               ? "Hoàn thành"
@@ -602,47 +735,47 @@ export function UserTable({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center p-3 bg-green-50 rounded-lg">
-                          <div className="text-2xl font-bold text-green-600">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+                        <div className="text-center p-2.5 sm:p-3 bg-green-50 rounded-lg">
+                          <div className="text-lg sm:text-2xl font-bold text-green-600">
                             {practice.score}
                           </div>
-                          <div className="text-xs text-green-600 font-medium">
+                          <div className="text-[11px] sm:text-xs text-green-600 font-medium">
                             Điểm số
                           </div>
                         </div>
 
-                        <div className="text-center p-3 bg-blue-50 rounded-lg">
-                          <div className="text-2xl font-bold text-blue-600">
+                        <div className="text-center p-2.5 sm:p-3 bg-blue-50 rounded-lg">
+                          <div className="text-lg sm:text-2xl font-bold text-blue-600">
                             {practice.correctAnswers}/{practice.totalQuestions}
                           </div>
-                          <div className="text-xs text-blue-600 font-medium">
+                          <div className="text-[11px] sm:text-xs text-blue-600 font-medium">
                             Câu trả lời đúng
                           </div>
                         </div>
 
-                        <div className="text-center p-3 bg-orange-50 rounded-lg">
-                          <div className="text-2xl font-bold text-orange-600 flex items-center justify-center gap-1">
-                            <Clock className="h-4 w-4" />
+                        <div className="text-center p-2.5 sm:p-3 bg-orange-50 rounded-lg">
+                          <div className="text-lg sm:text-2xl font-bold text-orange-600 flex items-center justify-center gap-1">
+                            <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
                             {formatDuration(practice.duration)}
                           </div>
-                          <div className="text-xs text-orange-600 font-medium">
+                          <div className="text-[11px] sm:text-xs text-orange-600 font-medium">
                             Thời gian
                           </div>
                         </div>
 
-                        <div className="text-center p-3 bg-purple-50 rounded-lg">
-                          <div className="text-sm font-bold text-purple-600 flex items-center justify-center gap-1">
-                            <Calendar className="h-4 w-4" />
+                        <div className="text-center p-2.5 sm:p-3 bg-amber-50 rounded-lg">
+                          <div className="text-xs sm:text-sm font-bold text-amber-700 flex items-center justify-center gap-1">
+                            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
                             {formatDate(practice.startedAt).split(" ")[0]}
                           </div>
-                          <div className="text-xs text-purple-600 font-medium">
+                          <div className="text-[11px] sm:text-xs text-amber-700 font-medium">
                             Ngày thi
                           </div>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-muted-foreground">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 sm:gap-2 text-xs text-muted-foreground">
                         <div>
                           <strong>Bắt đầu:</strong>{" "}
                           {formatDate(practice.startedAt)}

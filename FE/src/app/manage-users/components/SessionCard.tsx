@@ -85,16 +85,16 @@ export function SessionCard({ session, index }: SessionCardProps) {
           </div>
 
           {/* Time range */}
-          <div className="flex items-center gap-1 mt-1">
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
             <Clock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-            <span className="text-sm font-mono">
+            <span className="text-xs sm:text-sm font-mono">
               {toVNTime(session.startTime)}
             </span>
-            <span className="text-muted-foreground text-sm">→</span>
-            <span className="text-sm font-mono">
+            <span className="text-muted-foreground text-xs sm:text-sm">→</span>
+            <span className="text-xs sm:text-sm font-mono">
               {session.endTime ? toVNTime(session.endTime) : "Đang hoạt động..."}
             </span>
-            <span className="text-xs text-muted-foreground ml-1">
+            <span className="text-xs text-muted-foreground">
               ({formatDuration(session.durationMinutes)})
             </span>
           </div>

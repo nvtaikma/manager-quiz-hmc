@@ -97,9 +97,11 @@ export default function UserSessionModal({ isOpen, onClose, userId, userName, ex
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Phiên đăng nhập: {userName}</DialogTitle>
+      <DialogContent className="w-[94vw] sm:max-w-md max-h-[88vh] flex flex-col p-4 sm:p-6">
+        <DialogHeader className="pr-6">
+          <DialogTitle className="text-base sm:text-lg text-left truncate">
+            Phiên đăng nhập: {userName}
+          </DialogTitle>
         </DialogHeader>
         
         {loading ? (
@@ -115,35 +117,35 @@ export default function UserSessionModal({ isOpen, onClose, userId, userName, ex
                 Người dùng này chưa có dữ liệu.
             </div>
         ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4 overflow-hidden flex flex-col flex-1">
                  {/* Trạng thái hiện tại */}
-                 <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
-                    <span className="font-medium text-sm">Trạng thái hiện tại:</span>
+                 <div className="flex items-center justify-between p-2.5 sm:p-3 border rounded-lg bg-gray-50 shrink-0">
+                    <span className="font-medium text-xs sm:text-sm">Trạng thái hiện tại:</span>
                     <Badge variant={userSession.isOnline ? "default" : "secondary"} className={userSession.isOnline ? "bg-green-500 hover:bg-green-600" : ""}>
                         {userSession.isOnline ? "Đang online" : "Offline"}
                     </Badge>
                  </div>
 
-                 <h4 className="text-sm font-semibold text-muted-foreground mt-4 mb-2 uppercase">Lịch sử đăng nhập</h4>
+                 <h4 className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase shrink-0">Lịch sử đăng nhập</h4>
 
                  {userSession.sessionHistory.length === 0 ? (
-                     <div className="p-4 text-center text-muted-foreground border rounded-lg">
+                     <div className="p-4 text-center text-muted-foreground border rounded-lg text-sm">
                          Không có lịch sử đăng nhập nào.
                      </div>
                  ) : (
-                     <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                     <div className="space-y-3 max-h-[56vh] sm:max-h-[400px] overflow-y-auto pr-1 sm:pr-2">
                         {userSession.sessionHistory.map((s) => (
-                          <div key={s._id} className="flex flex-col space-y-2 p-3 border rounded-lg">
-                              <div className="flex items-start space-x-3">
-                                  <div className="p-2 bg-gray-100 rounded-full border">
+                          <div key={s._id} className="flex flex-col space-y-2 p-2.5 sm:p-3 border rounded-lg">
+                              <div className="flex items-start space-x-2.5 sm:space-x-3">
+                                  <div className="p-2 bg-gray-100 rounded-full border shrink-0">
                                       {getDeviceIcon(s)}
                                   </div>
-                                  <div className="flex-1 space-y-1">
-                                      <div className="flex items-center justify-between">
-                                         <p className="font-medium text-sm">{s.deviceInfo.browser} trên {s.deviceInfo.os}</p>
-                                         {s.isActive && <Badge variant="outline" className="text-xs">Đang gắn token</Badge>}
+                                  <div className="flex-1 min-w-0 space-y-1">
+                                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                                         <p className="font-medium text-xs sm:text-sm truncate">{s.deviceInfo.browser} trên {s.deviceInfo.os}</p>
+                                         {s.isActive && <Badge variant="outline" className="text-[11px] sm:text-xs shrink-0">Đang gắn token</Badge>}
                                       </div>
-                                      <p className="text-xs text-muted-foreground">IP: {s.deviceInfo.ip} • Device: {s.deviceInfo.deviceName}</p>
+                                      <p className="text-xs text-muted-foreground break-all">IP: {s.deviceInfo.ip} • Device: {s.deviceInfo.deviceName}</p>
                                   </div>
                               </div>
               
@@ -161,7 +163,7 @@ export default function UserSessionModal({ isOpen, onClose, userId, userName, ex
                                       </p>
                                   </div>
                                    {s.logoutAt && (
-                                       <div className="col-span-2 mt-1 bg-red-50 p-1.5 rounded text-red-700">
+                                       <div className="col-span-2 mt-1 bg-red-50 p-1.5 rounded text-red-700 break-words">
                                            <span className="font-medium">Đã đăng xuất: </span> 
                                            {format(new Date(s.logoutAt), "HH:mm dd/MM/yyyy", { locale: vi })}
                                            {s.logoutReason && <span className="text-muted-foreground"> ({s.logoutReason})</span>}

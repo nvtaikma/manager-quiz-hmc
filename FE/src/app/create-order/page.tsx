@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, X, ClipboardPaste } from "lucide-react";
+import { Search, X, ClipboardPaste, Clock } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -53,10 +53,14 @@ interface OrderItem {
   selectedType: string;
 }
 
+const RECENT_PRODUCTS_STORAGE_KEY = "hmc_recent_ordered_products";
+const MAX_RECENT_PRODUCTS = 8;
+
 export default function CreateOrder() {
   const [step, setStep] = useState<"customer" | "products">("customer");
   const [customerId, setCustomerId] = useState<string>("");
   const [products, setProducts] = useState<Product[]>([]);
+  const [recentProductIds, setRecentProductIds] = useState<string[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<OrderItem[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isVip, setIsVip] = useState<boolean>(true);
@@ -150,6 +154,7 @@ export default function CreateOrder() {
             toast({
               title: "Đã dán thông tin tự động!",
               description: `Email: ${extractedEmail} | Tên: ${detectedName}`,
+              duration: 500,
             });
             return;
           }
@@ -172,6 +177,7 @@ export default function CreateOrder() {
                 toast({
                   title: "Đã dán email & tìm thấy khách hàng cũ!",
                   description: `Email: ${extractedEmail} | Tên: ${existing.name}`,
+                  duration: 500,
                 });
                 return;
               }
@@ -184,6 +190,7 @@ export default function CreateOrder() {
         toast({
           title: "Đã dán email thành công!",
           description: extractedEmail,
+          duration: 500,
         });
       } else {
         // Trường hợp không khớp regex email hoàn chỉnh nhưng có chứa ký tự @
@@ -196,6 +203,7 @@ export default function CreateOrder() {
           toast({
             title: "Đã dán nội dung vào email",
             description: trimmed,
+            duration: 500,
           });
         } else {
           toast({
@@ -264,15 +272,31 @@ export default function CreateOrder() {
     return searchIndex === searchChars.length;
   };
 
-  // Filter products based on fuzzy search
+  // Filter products based on fuzzy search và đẩy các môn được order gần đây lên đầu
   const filteredProducts = useMemo(() => {
+    const recentOrderMap = new Map(
+      recentProductIds.map((id, index) => [id, index])
+    );
+
+    const sortedProducts = [...products].sort((a, b) => {
+      const indexA = recentOrderMap.get(a._id);
+      const indexB = recentOrderMap.get(b._id);
+
+      if (indexA !== undefined && indexB !== undefined) {
+        return indexA - indexB;
+      }
+      if (indexA !== undefined) return -1;
+      if (indexB !== undefined) return 1;
+      return 0;
+    });
+
     if (!debouncedSearchTerm.trim()) {
-      return products;
+      return sortedProducts;
     }
-    return products.filter((product) =>
+    return sortedProducts.filter((product) =>
       fuzzySearch(product.name, debouncedSearchTerm)
     );
-  }, [products, debouncedSearchTerm]);
+  }, [products, recentProductIds, debouncedSearchTerm]);
 
   // Keyboard shortcut để focus vào search input
   useEffect(() => {
@@ -317,9 +341,64 @@ export default function CreateOrder() {
     }
   }
 
+  async function loadRecentOrderedProducts() {
+    let localIds: string[] = [];
+    try {
+      const saved = localStorage.getItem(RECENT_PRODUCTS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          localIds = parsed.filter((id): id is string => typeof id === "string");
+        }
+      }
+    } catch (e) {
+      console.error("Không thể đọc lịch sử môn học gần đây từ localStorage:", e);
+    }
+
+    if (localIds.length > 0) {
+      setRecentProductIds(localIds.slice(0, MAX_RECENT_PRODUCTS));
+    }
+
+    // Nếu localStorage chưa đủ danh sách gần đây, tự động bổ sung từ các đơn hàng mới nhất trên hệ thống
+    if (localIds.length < MAX_RECENT_PRODUCTS) {
+      try {
+        const res = await fetchApi(`/orders/list?page=1`);
+        if (res.ok) {
+          const result = await res.json();
+          const orders = result?.data?.orders || [];
+          const apiProductIds: string[] = [];
+          for (const order of orders) {
+            if (Array.isArray(order?.items)) {
+              for (const item of order.items) {
+                const pid =
+                  typeof item?.productId === "string"
+                    ? item.productId
+                    : item?.productId?._id;
+                if (pid) {
+                  apiProductIds.push(String(pid));
+                }
+              }
+            }
+          }
+          const merged = Array.from(
+            new Set([...localIds, ...apiProductIds])
+          ).slice(0, MAX_RECENT_PRODUCTS);
+          setRecentProductIds(merged);
+          localStorage.setItem(
+            RECENT_PRODUCTS_STORAGE_KEY,
+            JSON.stringify(merged)
+          );
+        }
+      } catch {
+        // Bỏ qua lỗi phụ nếu không lấy được đơn gần đây
+      }
+    }
+  }
+
   async function fetchProducts() {
     setLoading(true);
     try {
+      loadRecentOrderedProducts();
       const response = await fetchApi(`/products/all/full?status=active`);
       if (!response.ok) {
         throw new Error("Lỗi khi tải danh sách sản phẩm");
@@ -384,9 +463,25 @@ export default function CreateOrder() {
         throw new Error("Lỗi khi tạo đơn hàng");
       }
 
+      // Lưu các môn học vừa đặt lên đầu danh sách gần đây trong localStorage
+      try {
+        const newlyOrderedIds = selectedProducts.map((item) => item.productId);
+        const updatedRecentIds = Array.from(
+          new Set([...newlyOrderedIds, ...recentProductIds])
+        ).slice(0, MAX_RECENT_PRODUCTS);
+        localStorage.setItem(
+          RECENT_PRODUCTS_STORAGE_KEY,
+          JSON.stringify(updatedRecentIds)
+        );
+        setRecentProductIds(updatedRecentIds);
+      } catch (e) {
+        console.error("Không thể lưu lịch sử môn học gần đây:", e);
+      }
+
       toast({
         title: "Thành công",
         description: "Đơn hàng đã được tạo.",
+        duration: 500,
       });
       router.push("/list-orders");
     } catch (error) {
@@ -416,9 +511,6 @@ export default function CreateOrder() {
         <Card>
           <CardHeader>
             <CardTitle>Thông tin khách hàng</CardTitle>
-            <CardDescription>
-              Nhập thông tin khách hàng để tiếp tục hoặc nhấn &quot;Dán email&quot; để tự động dán từ tin nhắn sao chép.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -481,7 +573,7 @@ export default function CreateOrder() {
                       htmlFor="isVip"
                       className="text-sm font-semibold leading-none cursor-pointer select-none"
                     >
-                      Khách hàng VIP (VIP)
+                      Khách hàng VIP
                     </label>
                     <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 border border-amber-300">
                       VIP
@@ -568,36 +660,50 @@ export default function CreateOrder() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {filteredProducts.map((product) => (
-                          <div
-                            key={product._id}
-                            className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-md transition-colors"
-                          >
-                            <Checkbox
-                              id={`product-${product._id}`}
-                              checked={selectedProducts.some(
-                                (item) => item.productId === product._id
-                              )}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  handleProductSelection(product._id, "1");
-                                } else {
-                                  setSelectedProducts((prev) =>
-                                    prev.filter(
-                                      (item) => item.productId !== product._id
-                                    )
-                                  );
-                                }
-                              }}
-                            />
-                            <Label
-                              htmlFor={`product-${product._id}`}
-                              className="cursor-pointer flex-1 text-sm"
+                        {filteredProducts.map((product) => {
+                          const isRecent = recentProductIds.includes(
+                            product._id
+                          );
+                          return (
+                            <div
+                              key={product._id}
+                              className={`flex items-center space-x-3 p-2 rounded-md transition-colors ${isRecent
+                                ? "bg-emerald-50/40 hover:bg-emerald-50/80 border border-emerald-100"
+                                : "hover:bg-gray-50"
+                                }`}
                             >
-                              {product.name}
-                            </Label>
-                          </div>
-                        ))}
+                              <Checkbox
+                                id={`product-${product._id}`}
+                                checked={selectedProducts.some(
+                                  (item) => item.productId === product._id
+                                )}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    handleProductSelection(product._id, "1");
+                                  } else {
+                                    setSelectedProducts((prev) =>
+                                      prev.filter(
+                                        (item) => item.productId !== product._id
+                                      )
+                                    );
+                                  }
+                                }}
+                              />
+                              <Label
+                                htmlFor={`product-${product._id}`}
+                                className="cursor-pointer flex-1 text-sm flex items-center justify-between gap-2"
+                              >
+                                <span>{product.name}</span>
+                                {isRecent && (
+                                  <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 border border-emerald-200">
+                                    <Clock className="h-3 w-3" />
+                                    Gần đây
+                                  </span>
+                                )}
+                              </Label>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </ScrollArea>

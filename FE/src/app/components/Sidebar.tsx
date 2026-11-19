@@ -111,8 +111,8 @@ const navItems = [
     href: "/reports",
     icon: AlertTriangle,
     label: "Reports",
-    title: "Báo cáo lỗi",
-    description: "Quản lý báo cáo lỗi câu hỏi",
+    title: "Báo cáo & Góp ý",
+    description: "Báo cáo lỗi câu hỏi & góp ý phát triển",
   },
   {
     href: "/classes",
@@ -286,7 +286,7 @@ export default function Sidebars({ content }: { content: React.ReactNode }) {
         <SidebarRail />
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="sticky top-0 z-30 flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex flex-1 items-center gap-2 px-4">
             <SidebarTrigger className="h-8 w-8 rounded-md border hover:bg-accent flex items-center justify-center text-muted-foreground" />
             <Separator orientation="vertical" className="mx-2 h-6" />

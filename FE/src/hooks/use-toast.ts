@@ -6,7 +6,7 @@ import * as React from "react";
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 3000;
+const TOAST_REMOVE_DELAY = 300;
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -160,6 +160,14 @@ function toast({ ...props }: Toast) {
       },
     },
   });
+
+  // Tự động đóng toast bằng setTimeout độc lập để không bị treo khi chuyển tab/cửa sổ khác
+  const autoDismissDuration = props.duration ?? 2000;
+  if (autoDismissDuration > 0 && autoDismissDuration !== Infinity) {
+    setTimeout(() => {
+      dismiss();
+    }, autoDismissDuration);
+  }
 
   return {
     id: id,

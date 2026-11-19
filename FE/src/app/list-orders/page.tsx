@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, Suspense, ReactNode } from "react";
-import { Filter } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DateRange } from "react-day-picker";
-import { Order, Product, SortConfig } from "@/app/list-orders/components/types";
-import { OrderFilters } from "./components/OrderFilters";
+import { Input } from "@/components/ui/input";
+import { Order, SortConfig } from "@/app/list-orders/components/types";
 import { OrderTable } from "./components/OrderTable";
 import { Pagination } from "@/components/ui/pagination";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -43,6 +42,9 @@ function OrdersContent(): ReactNode {
   const page = searchParams.get("page");
   const productId = searchParams.get("productId");
   const userId = searchParams.get("userId");
+  const statusFromUrl = searchParams.get("status") || "all";
+  const searchFromUrl = searchParams.get("search") || "";
+
   const [productName, setProductName] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
 
@@ -51,11 +53,13 @@ function OrdersContent(): ReactNode {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState(searchFromUrl);
+  const [appliedSearch, setAppliedSearch] = useState(searchFromUrl);
+  const [statusFilter, setStatusFilter] = useState(statusFromUrl);
+
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(parseInt(page || "1"));
   const [totalPages, setTotalPages] = useState(1);
@@ -63,87 +67,79 @@ function OrdersContent(): ReactNode {
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [shouldDeleteStudent, setShouldDeleteStudent] = useState(false);
 
-  // Sử dụng useMemo để cache kết quả filter và sort
-  const filterAndSortOrders = useCallback(() => {
-    let result = orders;
-
-    // Thực hiện filter và sort trong một lần lặp duy nhất
-    result = result.filter((order) => {
-      const matchesSearch =
-        !searchTerm ||
-        order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.customer.email.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesStatus =
-        statusFilter === "all" || order.status === statusFilter;
-
-      const matchesDate =
-        !dateRange?.from ||
-        !dateRange?.to ||
-        (new Date(order.orderDate) >= dateRange.from &&
-          new Date(order.orderDate) <= dateRange.to);
-
-      return matchesSearch && matchesStatus && matchesDate;
-    });
-
-    // Sort nếu cần
-    if (sortConfig) {
-      result.sort((a, b) => {
-        const valA = a[sortConfig.key] ?? "";
-        const valB = b[sortConfig.key] ?? "";
-        const compareResult = valA < valB ? -1 : 1;
-        return sortConfig.direction === "ascending"
-          ? compareResult
-          : -compareResult;
-      });
-    }
-
-    setFilteredOrders(result);
-  }, [orders, searchTerm, statusFilter, sortConfig, dateRange]);
-
   useEffect(() => {
     const pageFromUrl = parseInt(page || "1");
     setCurrentPage(pageFromUrl);
   }, [page]);
 
   useEffect(() => {
-    const abortController = new AbortController();
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const url = new URL(`${API_BASE_URL}/orders/list`);
-        url.searchParams.append("page", currentPage.toString());
-        if (productId) {
-          url.searchParams.append("productId", productId);
-        }
-        if (userId) {
-          url.searchParams.append("userId", userId);
-        }
-        
-        // Extract the endpoint path from the url object
-        const endpoint = url.pathname.replace('/api', '') + url.search;
-        const response = await fetchApi(endpoint, {
-          signal: abortController.signal,
-        });
-        
-        if (!response.ok) throw new Error("Không thể tải danh sách đơn hàng");
+    const sFromUrl = searchParams.get("status") || "all";
+    setStatusFilter(sFromUrl);
+    const qFromUrl = searchParams.get("search") || "";
+    setSearchTerm(qFromUrl);
+    setAppliedSearch(qFromUrl);
+  }, [searchParams]);
 
-        const data = await response.json();
-        setOrders(data.data.orders || []);
-        setTotalPages(data.data.pagination.totalPages);
-      } catch (error: unknown) {
-        if (error instanceof Error && error.name === "AbortError") return;
-        console.error("Lỗi khi tải danh sách đơn hàng:", error);
-        setError("Không thể tải danh sách đơn hàng. Vui lòng thử lại sau.");
-      } finally {
-        setLoading(false);
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const url = new URL(`${API_BASE_URL}/orders/list`);
+      url.searchParams.append("page", currentPage.toString());
+      if (productId) {
+        url.searchParams.append("productId", productId);
       }
-    };
+      if (userId) {
+        url.searchParams.append("userId", userId);
+      }
+      if (statusFilter && statusFilter !== "all") {
+        url.searchParams.append("status", statusFilter);
+      }
+      if (appliedSearch.trim()) {
+        url.searchParams.append("search", appliedSearch.trim());
+      }
 
+      // Extract the endpoint path from the url object
+      const endpoint = url.pathname.replace("/api", "") + url.search;
+      const response = await fetchApi(endpoint);
+
+      if (!response.ok) throw new Error("Không thể tải danh sách đơn hàng");
+
+      const data = await response.json();
+      const rawOrders = data.data.orders || [];
+      setOrders(rawOrders);
+      setTotalPages(data.data.pagination?.totalPages || 1);
+    } catch (error: unknown) {
+      console.error("Lỗi khi tải danh sách đơn hàng:", error);
+      setError("Không thể tải danh sách đơn hàng. Vui lòng thử lại sau.");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, productId, userId, statusFilter, appliedSearch]);
+
+  useEffect(() => {
     fetchData();
-    return () => abortController.abort();
-  }, [currentPage, productId, userId]);
+  }, [fetchData]);
+
+  // Client sort on current page orders
+  useEffect(() => {
+    if (!sortConfig) {
+      setFilteredOrders(orders);
+      return;
+    }
+    const sorted = [...orders].sort((a, b) => {
+      let valA: any = a[sortConfig.key] ?? "";
+      let valB: any = b[sortConfig.key] ?? "";
+      if (sortConfig.key === "customer") {
+        valA = a.customer?.name ?? "";
+        valB = b.customer?.name ?? "";
+      }
+      const compareResult = valA < valB ? -1 : valA > valB ? 1 : 0;
+      return sortConfig.direction === "ascending"
+        ? compareResult
+        : -compareResult;
+    });
+    setFilteredOrders(sorted);
+  }, [orders, sortConfig]);
 
   useEffect(() => {
     if (productId) {
@@ -262,25 +258,56 @@ function OrdersContent(): ReactNode {
     }));
   };
 
-  const clearFilters = useCallback(() => {
-    setSearchTerm("");
-    setStatusFilter("all");
-    setDateRange(undefined);
-  }, []);
+  const handleStatusChange = (newStatus: string) => {
+    setStatusFilter(newStatus);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", "1");
+    if (newStatus !== "all") {
+      params.set("status", newStatus);
+    } else {
+      params.delete("status");
+    }
+    router.push(`?${params.toString()}`, { scroll: false });
+    setCurrentPage(1);
+  };
+
+  const handleApplySearch = (keyword?: string) => {
+    const clean = (keyword !== undefined ? keyword : searchTerm).trim();
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", "1");
+    if (clean) {
+      params.set("search", clean);
+    } else {
+      params.delete("search");
+    }
+    router.push(`?${params.toString()}`, { scroll: false });
+    setCurrentPage(1);
+    setAppliedSearch(clean);
+  };
 
   const handlePageChange = useCallback(
-    (page: number) => {
-      const params = new URLSearchParams(searchParams);
-      params.set("page", page.toString());
+    (newPage: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("page", newPage.toString());
       if (productId) {
         params.set("productId", productId);
       }
       if (userId) {
         params.set("userId", userId);
       }
+      if (statusFilter && statusFilter !== "all") {
+        params.set("status", statusFilter);
+      } else {
+        params.delete("status");
+      }
+      if (appliedSearch.trim()) {
+        params.set("search", appliedSearch.trim());
+      } else {
+        params.delete("search");
+      }
       router.push(`?${params.toString()}`);
     },
-    [router, searchParams, productId, userId]
+    [router, searchParams, productId, userId, statusFilter, appliedSearch]
   );
 
   const filterOrdersByUser = async (userId: string) => {
@@ -312,13 +339,14 @@ function OrdersContent(): ReactNode {
   const handleViewAllOrders = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams(searchParams);
-      params.delete("userId");
-      params.delete("productId");
+      const params = new URLSearchParams();
       params.set("page", "1");
       router.push(`?${params.toString()}`, { scroll: false });
       setUserName("");
       setProductName("");
+      setSearchTerm("");
+      setAppliedSearch("");
+      setStatusFilter("all");
       setCurrentPage(1);
     } catch (error) {
       console.error("Lỗi khi tải danh sách đơn hàng:", error);
@@ -328,16 +356,18 @@ function OrdersContent(): ReactNode {
     }
   };
 
-  // Thêm useEffect để xử lý filter và sort
-  useEffect(() => {
-    filterAndSortOrders();
-  }, [filterAndSortOrders]);
-
   if (loading) return <LoadingSpinner />;
   if (error) return <div className="p-6 text-red-500">{error}</div>;
 
+  const statusTabs = [
+    { value: "all", label: "Tất cả" },
+    { value: "pending", label: "Đang chờ" },
+    { value: "completed", label: "Hoàn thành" },
+    { value: "cancelled", label: "Đã hủy" },
+  ];
+
   return (
-    <div className="p-0 md:p-6 space-y-6">
+    <div className="p-0 md:p-6 space-y-5">
       <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -359,7 +389,7 @@ function OrdersContent(): ReactNode {
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
             Danh sách đơn hàng
           </h2>
           {userName && (
@@ -385,34 +415,74 @@ function OrdersContent(): ReactNode {
             </div>
           )}
         </div>
-        <div className="flex gap-2">
-          {(productId || userId) && (
+        {(productId || userId) && (
+          <div className="flex gap-2">
             <Button variant="outline" onClick={handleViewAllOrders}>
               Xem tất cả đơn hàng
             </Button>
-          )}
+          </div>
+        )}
+      </div>
+
+      {/* Thanh Tabs trạng thái & Ô tìm kiếm trực tiếp qua API */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="grid grid-cols-4 sm:inline-flex items-center gap-1 rounded-lg bg-muted p-1 w-full sm:w-auto">
+          {statusTabs.map((tab) => {
+            const isActive = statusFilter === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => handleStatusChange(tab.value)}
+                className={`px-2 sm:px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-medium whitespace-nowrap text-center transition-all ${
+                  isActive
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Tìm mã đơn, tên hoặc email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleApplySearch();
+                }
+              }}
+              className="pl-9 pr-8"
+            />
+            {(searchTerm || appliedSearch) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm("");
+                  handleApplySearch("");
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                title="Xóa tìm kiếm"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           <Button
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-            variant="outline"
+            type="button"
+            variant="secondary"
+            onClick={() => handleApplySearch()}
           >
-            <Filter className="mr-2 h-4 w-4" />
-            {isFilterOpen ? "Ẩn bộ lọc" : "Hiện bộ lọc"}
+            Tìm
           </Button>
         </div>
       </div>
-
-      {isFilterOpen && (
-        <OrderFilters
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          dateRange={dateRange}
-          setDateRange={setDateRange}
-          clearFilters={clearFilters}
-          onClose={() => setIsFilterOpen(false)}
-        />
-      )}
 
       <Suspense fallback={<LoadingSpinner />}>
         <OrderTable

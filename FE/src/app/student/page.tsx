@@ -118,10 +118,10 @@ function StudentContent(): ReactNode {
   }
 
   return (
-    <div className="p-0 md:p-6 space-y-6">
+    <div className="p-0 md:p-6 space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Danh sách sinh viên</h2>
-        <p className="text-sm text-muted-foreground mt-2">
+        <h2 className="text-xl sm:text-3xl font-bold tracking-tight">Danh sách sinh viên</h2>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
           Quản lý và xem thông tin sinh viên theo trạng thái
         </p>
       </div>
@@ -131,15 +131,19 @@ function StudentContent(): ReactNode {
         onValueChange={(v) => handleTabChange(v as StudentStatus)}
         className="w-full"
       >
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <TabsList className="grid w-full max-w-[400px] grid-cols-3">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4">
+          <TabsList className="grid w-full sm:max-w-[440px] grid-cols-4 h-auto p-1">
             {(
               Object.entries(tabConfig) as [
                 StudentStatus,
                 { label: string; value: StudentStatus }
               ][]
             ).map(([key, config]) => (
-              <TabsTrigger key={key} value={config.value}>
+              <TabsTrigger
+                key={key}
+                value={config.value}
+                className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 whitespace-nowrap"
+              >
                 {config.label}
               </TabsTrigger>
             ))}
@@ -165,7 +169,7 @@ function StudentContent(): ReactNode {
             }
           }}
           disabled={loading}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium flex-shrink-0 disabled:opacity-50"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-xs sm:text-sm font-medium flex-shrink-0 disabled:opacity-50 w-full sm:w-auto text-center"
         >
           {loading ? "Đang xử lý..." : "🔍 Quét học viên hết hạn (>90 ngày)"}
         </button>

@@ -82,11 +82,11 @@ export default function ClassesPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Quản lý lớp học</h1>
-          <p className="text-muted-foreground flex flex-wrap items-center gap-2 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Quản lý lớp học</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-2 mt-1">
             Danh sách các lớp và thời khóa biểu.
             {totalTimetables !== null ? (
               <Badge variant="secondary" className="font-normal text-xs px-2 py-0.5">
@@ -97,23 +97,32 @@ export default function ClassesPage() {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setIsExamScheduleOpen(true)} className="border-primary/20 hover:bg-primary/5 text-primary relative">
-            <CalendarCheck className="mr-2 h-4 w-4" /> Lịch thi tổng hợp
+        <div className="grid grid-cols-2 sm:flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsExamScheduleOpen(true)}
+            className="border-primary/20 hover:bg-primary/5 text-primary relative text-xs sm:text-sm px-2.5 sm:px-4"
+          >
+            <CalendarCheck className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" />
+            <span className="truncate">Lịch thi tổng hợp</span>
             {upcomingExamsCount > 0 && (
               <Badge variant="destructive" className="absolute -top-2 -right-2 px-1.5 min-w-5 h-5 flex items-center justify-center text-[10px]">
                 {upcomingExamsCount}
               </Badge>
             )}
           </Button>
-          <Button onClick={() => setIsAddModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Thêm lớp
+          <Button
+            onClick={() => setIsAddModalOpen(true)}
+            className="text-xs sm:text-sm px-2.5 sm:px-4"
+          >
+            <Plus className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" />
+            <span className="truncate">Thêm lớp</span>
           </Button>
         </div>
       </div>
 
       <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Tìm kiếm lớp..."
@@ -125,13 +134,13 @@ export default function ClassesPage() {
       </div>
 
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 rounded-lg bg-gray-100 animate-pulse" />
+            <div key={i} className="h-28 sm:h-32 rounded-lg bg-gray-100 animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
           {filteredClasses.length === 0 ? (
              <div className="col-span-full text-center py-10 text-muted-foreground">
                 Chưa có lớp nào. Hãy thêm mới.
@@ -140,17 +149,19 @@ export default function ClassesPage() {
             filteredClasses.map((cls) => (
               <Link href={`/classes/${encodeURIComponent(cls.name)}`} key={cls._id}>
                 <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">{cls.name}</CardTitle>
+                  <CardHeader className="p-3.5 sm:p-6 pb-1.5 sm:pb-2">
+                    <CardTitle className="text-base sm:text-lg truncate" title={cls.name}>
+                      {cls.name}
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar className="mr-2 h-4 w-4" />
-                        Xem lịch học
+                  <CardContent className="p-3.5 sm:p-6 pt-0 sm:pt-0">
+                    <div className="flex flex-col gap-1.5 sm:gap-2">
+                      <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                        <Calendar className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        <span>Xem lịch học</span>
                       </div>
                        {cls.lastTimetableUpdate && (
-                        <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded inline-block">
+                        <div className="text-[11px] sm:text-xs text-green-600 bg-green-50 px-2 py-1 rounded inline-block truncate">
                           Cập nhật: {format(new Date(cls.lastTimetableUpdate), "dd/MM HH:mm", { locale: vi })}
                         </div>
                       )}

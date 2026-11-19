@@ -84,10 +84,10 @@ export default function ExamScheduleModal({ isOpen, onClose }: ExamScheduleModal
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-2xl flex items-center gap-2">
-            <CalendarClock className="h-6 w-6 text-primary" />
+      <DialogContent className="w-[94vw] sm:max-w-4xl h-[85vh] flex flex-col p-0">
+        <DialogHeader className="p-4 sm:p-6 pb-2 pr-10">
+          <DialogTitle className="text-lg sm:text-2xl flex items-center gap-2 text-left">
+            <CalendarClock className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
             Lịch Thi Tổng Hợp
           </DialogTitle>
         </DialogHeader>
@@ -116,8 +116,8 @@ export default function ExamScheduleModal({ isOpen, onClose }: ExamScheduleModal
               <p>Hiện không có lịch thi nào được xếp.</p>
             </div>
           ) : (
-            <ScrollArea className="h-full p-6 pt-0">
-              <div className="space-y-8 pr-4">
+            <ScrollArea className="h-full p-4 sm:p-6 pt-0">
+              <div className="space-y-6 sm:space-y-8 pr-2 sm:pr-4">
                 {sortedDates.map((dateStr) => {
                   const dateObj = new Date(dateStr);
                   // Consider "past" if the day is strictly before today (ignoring hours)

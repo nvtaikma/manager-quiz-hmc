@@ -155,15 +155,15 @@ export default function UserActivityModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Activity className="h-5 w-5 text-blue-500" />
-            Lịch sử hoạt động — {userName}
+      <DialogContent className="w-[94vw] sm:max-w-2xl max-h-[88vh] flex flex-col p-4 sm:p-6">
+        <DialogHeader className="pr-6">
+          <DialogTitle className="flex items-center gap-2 text-sm sm:text-base text-left leading-snug">
+            <Activity className="h-5 w-5 text-blue-500 shrink-0" />
+            <span className="truncate">Lịch sử hoạt động — {userName}</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto pr-1">
           {loading ? (
             <div className="flex justify-center items-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
@@ -189,7 +189,7 @@ export default function UserActivityModal({
                 <p className="text-xs text-muted-foreground">
                   👆 Click vào cột để xem chi tiết theo phiên
                 </p>
-                <div className="h-44 w-full">
+                <div className="h-36 sm:h-44 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={chartData}
@@ -262,7 +262,7 @@ export default function UserActivityModal({
                   </div>
 
                   {/* Sessions list */}
-                  <div className="max-h-[300px] overflow-y-auto pr-2">
+                  <div className="max-h-[38vh] sm:max-h-[300px] overflow-y-auto pr-1 sm:pr-2">
                     <div className="space-y-2">
                       {selectedDay.sessions.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-4">
