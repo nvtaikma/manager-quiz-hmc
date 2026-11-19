@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, X } from "lucide-react";
+import { Search, X, ClipboardPaste } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -73,6 +73,149 @@ export default function CreateOrder() {
   const [searchInputRef, setSearchInputRef] = useState<HTMLInputElement | null>(
     null
   );
+
+  // Xử lý dán email tự động từ clipboard (hỗ trợ trích xuất thông minh từ tin nhắn chat)
+  const handlePasteEmail = async () => {
+    try {
+      if (!navigator?.clipboard?.readText) {
+        toast({
+          title: "Trình duyệt không hỗ trợ đọc clipboard",
+          description: "Vui lòng dán thủ công bằng phím tắt Ctrl + V",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const rawText = await navigator.clipboard.readText();
+      if (!rawText || !rawText.trim()) {
+        toast({
+          title: "Clipboard trống",
+          description: "Bộ nhớ tạm không có nội dung nào để dán.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Trích xuất email bằng regex (bỏ qua các văn bản chat bao quanh nếu có)
+      const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i;
+      const match = rawText.match(emailRegex);
+
+      if (match) {
+        const extractedEmail = match[0].toLowerCase().trim();
+        form.setValue("email", extractedEmail, {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
+
+        // Nếu trường tên đang trống, tự động nhận diện tên từ nội dung chat hoặc tra cứu khách hàng cũ
+        const currentName = form.getValues("name");
+        if (!currentName || !currentName.trim()) {
+          // 1. Thử nhận diện tên từ các dòng khác trong tin nhắn sao chép
+          const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+          let detectedName = "";
+
+          for (const line of lines) {
+            if (!line.includes("@")) {
+              const cleanLine = line
+                .replace(/^(họ và tên|họ tên|tên|name|khách hàng|khách)[\s:=_-]+/i, "")
+                .trim();
+              if (
+                cleanLine.length >= 2 &&
+                !/^(sđt|phone|đt|stk|ngân hàng|bank|fb|zalo|pass|mật khẩu)/i.test(cleanLine)
+              ) {
+                detectedName = cleanLine;
+                break;
+              }
+            } else {
+              const parts = line.split(/[-–|;]/).map((p) => p.trim());
+              for (const part of parts) {
+                if (!part.includes("@") && part.length >= 2 && !/^\d+$/.test(part)) {
+                  const cleanPart = part
+                    .replace(/^(họ và tên|họ tên|tên|name)[\s:=_-]+/i, "")
+                    .trim();
+                  if (cleanPart.length >= 2) {
+                    detectedName = cleanPart;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          if (detectedName) {
+            form.setValue("name", detectedName, {
+              shouldValidate: true,
+              shouldDirty: true,
+            });
+            toast({
+              title: "Đã dán thông tin tự động!",
+              description: `Email: ${extractedEmail} | Tên: ${detectedName}`,
+            });
+            return;
+          }
+
+          // 2. Nếu tin nhắn chỉ có email, thử tra cứu khách hàng cũ từ database
+          try {
+            const res = await fetchApi(
+              `/customers/search?keyword=${encodeURIComponent(extractedEmail)}`
+            );
+            if (res.ok) {
+              const result = await res.json();
+              const existing = result?.data?.customers?.find(
+                (c: any) => c.email?.toLowerCase() === extractedEmail
+              );
+              if (existing?.name && !form.getValues("name")) {
+                form.setValue("name", existing.name, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                });
+                toast({
+                  title: "Đã dán email & tìm thấy khách hàng cũ!",
+                  description: `Email: ${extractedEmail} | Tên: ${existing.name}`,
+                });
+                return;
+              }
+            }
+          } catch (err) {
+            // Bỏ qua lỗi tra cứu nền
+          }
+        }
+
+        toast({
+          title: "Đã dán email thành công!",
+          description: extractedEmail,
+        });
+      } else {
+        // Trường hợp không khớp regex email hoàn chỉnh nhưng có chứa ký tự @
+        const trimmed = rawText.trim();
+        if (trimmed.includes("@")) {
+          form.setValue("email", trimmed, {
+            shouldValidate: true,
+            shouldDirty: true,
+          });
+          toast({
+            title: "Đã dán nội dung vào email",
+            description: trimmed,
+          });
+        } else {
+          toast({
+            title: "Không tìm thấy email hợp lệ trong clipboard",
+            description:
+              "Vui lòng sao chép tin nhắn chứa email khách hàng (@gmail.com hoặc @icloud.com) trước khi dán.",
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Paste clipboard error:", error);
+      toast({
+        title: "Không thể đọc clipboard",
+        description:
+          "Vui lòng cho phép quyền truy cập bộ nhớ tạm trên trình duyệt hoặc dùng Ctrl + V để dán.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Debounce search term để cải thiện performance
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -274,7 +417,7 @@ export default function CreateOrder() {
           <CardHeader>
             <CardTitle>Thông tin khách hàng</CardTitle>
             <CardDescription>
-              Nhập thông tin khách hàng để tiếp tục.
+              Nhập thông tin khách hàng để tiếp tục hoặc nhấn &quot;Dán email&quot; để tự động dán từ tin nhắn sao chép.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -301,10 +444,27 @@ export default function CreateOrder() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nhập email" {...field} />
-                      </FormControl>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>Email</FormLabel>
+                        <span className="text-xs text-muted-foreground">
+                          (@gmail.com hoặc @icloud.com)
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input placeholder="Nhập email (@gmail.com hoặc @icloud.com)" {...field} />
+                        </FormControl>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handlePasteEmail}
+                          className="shrink-0 flex items-center justify-center gap-1.5 px-3 border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 font-medium"
+                          title="Dán email từ clipboard"
+                        >
+                          <ClipboardPaste className="h-4 w-4 text-blue-600" />
+                          <span className="hidden sm:inline">Dán email</span>
+                        </Button>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -326,9 +486,7 @@ export default function CreateOrder() {
                     <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 border border-amber-300">
                       VIP
                     </span>
-                    <span className="text-xs text-muted-foreground">
-                      (Học viên khi tạo đơn sẽ nhận trạng thái VIP thay vì Đang chờ)
-                    </span>
+
                   </div>
                 </div>
 
