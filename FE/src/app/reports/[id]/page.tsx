@@ -41,6 +41,8 @@ import {
   Check,
   Upload as UploadIcon,
   ExternalLink,
+  Lightbulb,
+  Sparkles,
 } from "lucide-react";
 import { handleImageUpload } from "@/lib/upload";
 
@@ -64,10 +66,11 @@ interface QuestionDetail {
 interface ReportDetail {
   _id: string;
   userId: { _id: string; name: string; email: string } | null;
-  questionId: QuestionDetail | string;
-  examId: { _id: string; name: string } | null;
-  productId: string;
-  reportType: "content_error" | "wrong_answer";
+  questionId?: QuestionDetail | string | null;
+  examId?: { _id: string; name: string } | null;
+  productId?: { _id: string; name: string } | string;
+  reportType: "content_error" | "wrong_answer" | "feedback";
+  feedbackCategory?: "new_feature" | "study_mode" | "ui_ux" | "bug_other";
   description?: string;
   correctAnswer?: string;
   reason?: string;
@@ -101,6 +104,14 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 const typeLabels: Record<string, string> = {
   content_error: "Lỗi nội dung",
   wrong_answer: "Sai đáp án",
+  feedback: "Góp ý phát triển",
+};
+
+const feedbackCategoryConfig: Record<string, { label: string; color: string }> = {
+  new_feature: { label: "✨ Tính năng mới", color: "text-purple-700 border-purple-300 bg-purple-50 dark:bg-purple-950/40 dark:text-purple-400" },
+  study_mode: { label: "📚 Chế độ học tập", color: "text-emerald-700 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400" },
+  ui_ux: { label: "🎨 Giao diện UI/UX", color: "text-pink-700 border-pink-300 bg-pink-50 dark:bg-pink-950/40 dark:text-pink-400" },
+  bug_other: { label: "🛠️ Lỗi khác / Góp ý", color: "text-amber-700 border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-400" },
 };
 
 export default function ReportDetailPage() {
@@ -317,121 +328,246 @@ export default function ReportDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* LEFT: Báo cáo của User */}
         <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                Nội dung báo cáo
-              </CardTitle>
-              <CardDescription>
-                Thông tin báo cáo từ sinh viên
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Report Type */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Loại báo cáo</span>
-                <Badge variant="outline" className={
-                  report.reportType === "content_error"
-                    ? "text-orange-600 border-orange-300 bg-orange-50"
-                    : "text-red-600 border-red-300 bg-red-50"
-                }>
-                  {typeLabels[report.reportType] || report.reportType}
-                </Badge>
-              </div>
-
-              <Separator />
-
-              {/* Mô tả */}
-              {report.description && (
-                <div>
-                  <p className="text-sm font-medium mb-1">Mô tả lỗi</p>
-                  <p className="text-sm bg-muted/50 p-3 rounded-md whitespace-pre-wrap">{report.description}</p>
-                </div>
-              )}
-
-              {/* Lý do */}
-              {report.reason && (
-                <div>
-                  <p className="text-sm font-medium mb-1">Lý do</p>
-                  <p className="text-sm bg-muted/50 p-3 rounded-md whitespace-pre-wrap">{report.reason}</p>
-                </div>
-              )}
-
-              {/* Đáp án đúng đề xuất */}
-              {report.correctAnswer && (
-                <div>
-                  <p className="text-sm font-medium mb-1">Đáp án đúng (đề xuất)</p>
-                  <p className="text-sm bg-green-50 text-green-800 p-3 rounded-md border border-green-200">
-                    {report.correctAnswer}
-                  </p>
-                </div>
-              )}
-
-
-              {/* Ảnh minh chứng */}
-              {report.imageUrl && (
-                <div>
-                  <p className="text-sm font-medium mb-2 flex items-center gap-1">
-                    <ImageIcon className="h-4 w-4" />
-                    Ảnh minh chứng
-                  </p>
-                  <div
-                    className="cursor-pointer border rounded-lg overflow-hidden hover:ring-2 hover:ring-primary transition-all"
-                    onClick={() => setShowImagePreview(!showImagePreview)}
-                  >
-                    <img
-                      src={report.imageUrl}
-                      alt="Ảnh minh chứng"
-                      className="w-full max-h-80 object-contain bg-muted/30"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <Separator />
-
-              {/* User info */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{report.userId?.name || "N/A"}</span>
-                  <span className="text-xs text-muted-foreground">{report.userId?.email}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {report.contactMethod === "zalo" ? (
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Mail className="h-4 w-4 text-muted-foreground" />
+          {report.reportType === "feedback" ? (
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                  <Lightbulb className="h-5 w-5 text-amber-500" />
+                  Nội dung góp ý phát triển phần mềm
+                </CardTitle>
+                <CardDescription>
+                  Ý kiến và đề xuất tính năng / giao diện từ học viên
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Badges for Type & Category */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="text-blue-700 border-blue-300 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300">
+                    💡 Góp ý phát triển
+                  </Badge>
+                  {report.feedbackCategory && feedbackCategoryConfig[report.feedbackCategory] && (
+                    <Badge variant="outline" className={feedbackCategoryConfig[report.feedbackCategory].color}>
+                      {feedbackCategoryConfig[report.feedbackCategory].label}
+                    </Badge>
                   )}
-                  <span className="text-sm">
-                    {report.contactMethod === "zalo" ? "Zalo" : "Facebook"}: {report.contactValue}
-                  </span>
-                  <a
-                    href={report.contactMethod === "zalo" ? `https://zalo.me/${report.contactValue}` : report.contactValue}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Button variant="outline" size="sm" className="h-6 px-2 text-xs ml-2">
-                      <ExternalLink className="h-3 w-3 mr-1" /> Mở liên kết
-                    </Button>
-                  </a>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    Ngày gửi: {formatDate(report.createdAt)}
-                  </span>
-                </div>
-                {report.examId && (
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Bài thi: {report.examId.name}</span>
+
+                <Separator />
+
+                {/* Mô tả chi tiết */}
+                {report.description && (
+                  <div>
+                    <p className="text-sm font-semibold mb-1 text-slate-800 dark:text-slate-200">
+                      Ý tưởng / Mô tả chi tiết
+                    </p>
+                    <p className="text-sm bg-muted/50 p-3.5 rounded-lg whitespace-pre-wrap leading-relaxed border border-muted">
+                      {report.description}
+                    </p>
                   </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
+
+                {/* Lý do / Bối cảnh */}
+                {report.reason && (
+                  <div>
+                    <p className="text-sm font-semibold mb-1 text-slate-800 dark:text-slate-200">
+                      Lý do & Kỳ vọng mong muốn
+                    </p>
+                    <p className="text-sm bg-muted/50 p-3.5 rounded-lg whitespace-pre-wrap leading-relaxed border border-muted">
+                      {report.reason}
+                    </p>
+                  </div>
+                )}
+
+                {/* Ảnh minh chứng / phác thảo */}
+                {report.imageUrl && (
+                  <div>
+                    <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                      <ImageIcon className="h-4 w-4 text-blue-500" />
+                      Hình ảnh đính kèm / Phác thảo
+                    </p>
+                    <div
+                      className="cursor-pointer border rounded-lg overflow-hidden hover:ring-2 hover:ring-primary transition-all bg-muted/20"
+                      onClick={() => setShowImagePreview(!showImagePreview)}
+                    >
+                      <img
+                        src={report.imageUrl}
+                        alt="Ảnh đính kèm"
+                        className="w-full max-h-80 object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* User info & Contact */}
+                <div className="space-y-2.5 bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-lg border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{report.userId?.name || "Học viên"}</span>
+                    <span className="text-xs text-muted-foreground">({report.userId?.email || "Không có email"})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {report.contactMethod === "zalo" ? (
+                      <Phone className="h-4 w-4 text-blue-500" />
+                    ) : (
+                      <Mail className="h-4 w-4 text-blue-600" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {report.contactMethod === "zalo" ? "Zalo" : "Facebook"}:
+                    </span>
+                    <span className="text-sm font-mono bg-white dark:bg-slate-800 px-2 py-0.5 rounded border text-blue-600 dark:text-blue-400">
+                      {report.contactValue}
+                    </span>
+                    <a
+                      href={
+                        report.contactMethod === "zalo"
+                          ? `https://zalo.me/${report.contactValue.replace(/\s+/g, "")}`
+                          : report.contactValue.startsWith("http")
+                          ? report.contactValue
+                          : `https://facebook.com/${report.contactValue}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button variant="outline" size="sm" className="h-6 px-2 text-xs ml-1">
+                        <ExternalLink className="h-3 w-3 mr-1" /> Mở liên hệ
+                      </Button>
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      Gửi lúc: {formatDate(report.createdAt)}
+                    </span>
+                  </div>
+                  {(report.examId || (typeof report.productId === "object" && report.productId?.name)) && (
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        Ngữ cảnh / Khóa học: {report.examId?.name || (typeof report.productId === "object" && report.productId?.name)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Nội dung báo cáo
+                </CardTitle>
+                <CardDescription>
+                  Thông tin báo cáo từ sinh viên
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Report Type */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Loại báo cáo</span>
+                  <Badge variant="outline" className={
+                    report.reportType === "content_error"
+                      ? "text-orange-600 border-orange-300 bg-orange-50"
+                      : "text-red-600 border-red-300 bg-red-50"
+                  }>
+                    {typeLabels[report.reportType] || report.reportType}
+                  </Badge>
+                </div>
+
+                <Separator />
+
+                {/* Mô tả */}
+                {report.description && (
+                  <div>
+                    <p className="text-sm font-medium mb-1">Mô tả lỗi</p>
+                    <p className="text-sm bg-muted/50 p-3 rounded-md whitespace-pre-wrap">{report.description}</p>
+                  </div>
+                )}
+
+                {/* Lý do */}
+                {report.reason && (
+                  <div>
+                    <p className="text-sm font-medium mb-1">Lý do</p>
+                    <p className="text-sm bg-muted/50 p-3 rounded-md whitespace-pre-wrap">{report.reason}</p>
+                  </div>
+                )}
+
+                {/* Đáp án đúng đề xuất */}
+                {report.correctAnswer && (
+                  <div>
+                    <p className="text-sm font-medium mb-1">Đáp án đúng (đề xuất)</p>
+                    <p className="text-sm bg-green-50 text-green-800 p-3 rounded-md border border-green-200">
+                      {report.correctAnswer}
+                    </p>
+                  </div>
+                )}
+
+                {/* Ảnh minh chứng */}
+                {report.imageUrl && (
+                  <div>
+                    <p className="text-sm font-medium mb-2 flex items-center gap-1">
+                      <ImageIcon className="h-4 w-4" />
+                      Ảnh minh chứng
+                    </p>
+                    <div
+                      className="cursor-pointer border rounded-lg overflow-hidden hover:ring-2 hover:ring-primary transition-all"
+                      onClick={() => setShowImagePreview(!showImagePreview)}
+                    >
+                      <img
+                        src={report.imageUrl}
+                        alt="Ảnh minh chứng"
+                        className="w-full max-h-80 object-contain bg-muted/30"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* User info */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{report.userId?.name || "N/A"}</span>
+                    <span className="text-xs text-muted-foreground">{report.userId?.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {report.contactMethod === "zalo" ? (
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <span className="text-sm">
+                      {report.contactMethod === "zalo" ? "Zalo" : "Facebook"}: {report.contactValue}
+                    </span>
+                    <a
+                      href={report.contactMethod === "zalo" ? `https://zalo.me/${report.contactValue}` : report.contactValue}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button variant="outline" size="sm" className="h-6 px-2 text-xs ml-2">
+                        <ExternalLink className="h-3 w-3 mr-1" /> Mở liên kết
+                      </Button>
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Ngày gửi: {formatDate(report.createdAt)}
+                    </span>
+                  </div>
+                  {report.examId && (
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">Bài thi: {report.examId.name}</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Related Reports */}
           {relatedCount > 0 && (
@@ -477,6 +613,32 @@ export default function ReportDetailPage() {
 
         {/* RIGHT: Câu hỏi gốc + Form xử lý */}
         <div className="space-y-4">
+          {/* If no question (e.g. feedback report), show friendly feedback processing card */}
+          {!question && (
+            <Card className="border-l-4 border-l-purple-500">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-purple-600" />
+                  Thông tin & Hướng dẫn xử lý góp ý
+                </CardTitle>
+                <CardDescription>
+                  Gợi ý tiếp nhận và phản hồi ý kiến đóng góp từ học viên
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                <div className="p-3.5 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                  <p className="font-semibold text-purple-900 dark:text-purple-300 mb-1">
+                    🎯 Đóng góp ý tưởng phát triển hệ thống
+                  </p>
+                  <p className="text-xs text-purple-800 dark:text-purple-400 leading-relaxed">
+                    Báo cáo này là ý kiến đóng góp từ học viên để cải thiện tính năng hoặc giao diện hệ thống.
+                    Sau khi đánh giá, bạn có thể cập nhật trạng thái bên dưới và phản hồi lại cho học viên qua Zalo / Facebook!
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Original Question */}
           {question && (
             <Card className={isEditingQuestion ? "border-2 border-blue-400" : ""}>
@@ -678,7 +840,7 @@ export default function ReportDetailPage() {
               </div>
 
               {/* Bulk Resolve Checkbox */}
-              {relatedCount > 0 && (newStatus === "resolved" || newStatus === "rejected") && (
+              {report.questionId && relatedCount > 0 && (newStatus === "resolved" || newStatus === "rejected") && (
                 <div className="flex items-start space-x-3 p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
                   <Checkbox
                     id="bulkResolve"

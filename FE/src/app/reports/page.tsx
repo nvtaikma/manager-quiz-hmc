@@ -44,18 +44,26 @@ import {
   FileWarning,
   TrendingUp,
   Copy,
+  Lightbulb,
+  Image as ImageIcon,
+  MessageCircle,
 } from "lucide-react";
 
 // Types
 interface Report {
   _id: string;
   userId: { _id: string; name: string; email: string } | null;
-  questionId: string;
+  questionId?: string;
   examId: { _id: string; name: string } | null;
-  reportType: "content_error" | "wrong_answer";
+  productId?: { _id: string; name: string } | string;
+  reportType: "content_error" | "wrong_answer" | "feedback";
+  feedbackCategory?: "new_feature" | "study_mode" | "ui_ux" | "bug_other";
   description?: string;
   correctAnswer?: string;
   reason?: string;
+  imageUrl?: string;
+  contactMethod?: "zalo" | "facebook";
+  contactValue?: string;
   questionText?: string;
   status: "pending" | "reviewed" | "resolved" | "rejected";
   adminNote?: string;
@@ -86,6 +94,14 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 const typeConfig: Record<string, { label: string; color: string }> = {
   content_error: { label: "Lỗi nội dung", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" },
   wrong_answer: { label: "Sai đáp án", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
+  feedback: { label: "Góp ý phát triển", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
+};
+
+const feedbackCategoryConfig: Record<string, { label: string; color: string }> = {
+  new_feature: { label: "Tính năng mới", color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" },
+  study_mode: { label: "Chế độ học tập", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  ui_ux: { label: "Giao diện UI/UX", color: "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400" },
+  bug_other: { label: "Lỗi khác / Góp ý", color: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" },
 };
 
 export default function ReportsPage() {
@@ -98,6 +114,7 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [reportTypeFilter, setReportTypeFilter] = useState("all");
+  const [feedbackCategoryFilter, setFeedbackCategoryFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -121,6 +138,9 @@ export default function ReportsPage() {
       }
       if (reportTypeFilter !== "all") {
         params.set("reportType", reportTypeFilter);
+      }
+      if (feedbackCategoryFilter !== "all") {
+        params.set("feedbackCategory", feedbackCategoryFilter);
       }
       if (searchTerm.trim()) {
         params.set("search", searchTerm.trim());
@@ -146,7 +166,7 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, activeTab, reportTypeFilter, searchTerm, toast]);
+  }, [currentPage, activeTab, reportTypeFilter, feedbackCategoryFilter, searchTerm, toast]);
 
   useEffect(() => {
     fetchReports();
@@ -155,7 +175,7 @@ export default function ReportsPage() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, reportTypeFilter, searchTerm]);
+  }, [activeTab, reportTypeFilter, feedbackCategoryFilter, searchTerm]);
 
   const handleQuickAction = async () => {
     if (!quickAction || !adminNote.trim()) {
@@ -215,9 +235,9 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Quản lý Báo cáo lỗi</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Quản lý Báo cáo & Góp ý</h1>
           <p className="text-muted-foreground mt-1">
-            Theo dõi và xử lý các báo cáo lỗi câu hỏi từ sinh viên
+            Theo dõi và xử lý các báo cáo lỗi câu hỏi & góp ý phát triển phần mềm từ học viên
           </p>
         </div>
       </div>
@@ -286,13 +306,21 @@ export default function ReportsPage() {
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Tìm kiếm theo nội dung câu hỏi..."
+            placeholder="Tìm theo nội dung, câu hỏi, liên hệ..."
             className="pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Select value={reportTypeFilter} onValueChange={setReportTypeFilter}>
+        <Select
+          value={reportTypeFilter}
+          onValueChange={(val) => {
+            setReportTypeFilter(val);
+            if (val !== "feedback") {
+              setFeedbackCategoryFilter("all");
+            }
+          }}
+        >
           <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Loại báo cáo" />
           </SelectTrigger>
@@ -300,8 +328,24 @@ export default function ReportsPage() {
             <SelectItem value="all">Tất cả loại</SelectItem>
             <SelectItem value="content_error">Lỗi nội dung</SelectItem>
             <SelectItem value="wrong_answer">Sai đáp án</SelectItem>
+            <SelectItem value="feedback">💡 Góp ý phát triển</SelectItem>
           </SelectContent>
         </Select>
+
+        {(reportTypeFilter === "all" || reportTypeFilter === "feedback") && (
+          <Select value={feedbackCategoryFilter} onValueChange={setFeedbackCategoryFilter}>
+            <SelectTrigger className="w-full sm:w-52">
+              <SelectValue placeholder="Danh mục góp ý" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả danh mục góp ý</SelectItem>
+              <SelectItem value="new_feature">✨ Tính năng mới</SelectItem>
+              <SelectItem value="study_mode">📚 Chế độ học tập</SelectItem>
+              <SelectItem value="ui_ux">🎨 Giao diện UI/UX</SelectItem>
+              <SelectItem value="bug_other">🛠️ Lỗi khác / Góp ý</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Tabs + Table */}
@@ -343,10 +387,10 @@ export default function ReportsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-12">#</TableHead>
-                        <TableHead>Nội dung câu hỏi</TableHead>
-                        <TableHead>Loại</TableHead>
-                        <TableHead>Người báo cáo</TableHead>
-                        <TableHead>Bài thi</TableHead>
+                        <TableHead>Nội dung / Câu hỏi</TableHead>
+                        <TableHead>Loại & Phân loại</TableHead>
+                        <TableHead>Người gửi & Liên hệ</TableHead>
+                        <TableHead>Bài thi / Khóa học</TableHead>
                         <TableHead>Trạng thái</TableHead>
                         <TableHead>Trùng</TableHead>
                         <TableHead>Ngày tạo</TableHead>
@@ -368,29 +412,70 @@ export default function ReportsPage() {
                             <TableCell className="text-muted-foreground text-sm">
                               {(currentPage - 1) * itemsPerPage + index + 1}
                             </TableCell>
-                            <TableCell className="max-w-[280px]">
-                              <p className="text-sm font-medium truncate">
-                                {truncateText(report.questionText || "", 60)}
-                              </p>
-                              {report.description && (
-                                <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                  {truncateText(report.description, 50)}
-                                </p>
+                            <TableCell className="max-w-[300px]">
+                              {report.reportType === "feedback" ? (
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-1.5 text-blue-700 dark:text-blue-400 font-medium text-sm">
+                                    <Lightbulb className="h-4 w-4 flex-shrink-0 text-amber-500" />
+                                    <span className="truncate">
+                                      {truncateText(report.description || report.reason || "Góp ý phát triển phần mềm", 60)}
+                                    </span>
+                                  </div>
+                                  {report.description && report.reason && (
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      Lý do: {truncateText(report.reason, 50)}
+                                    </p>
+                                  )}
+                                  {report.imageUrl && (
+                                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                      <ImageIcon className="h-3 w-3 text-blue-500" />
+                                      <span>Có ảnh đính kèm</span>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div>
+                                  <p className="text-sm font-medium truncate">
+                                    {truncateText(report.questionText || "", 60)}
+                                  </p>
+                                  {report.description && (
+                                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                      {truncateText(report.description, 50)}
+                                    </p>
+                                  )}
+                                </div>
                               )}
                             </TableCell>
                             <TableCell>
-                              <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${typeCfg?.color || ""}`}>
-                                {typeCfg?.label || report.reportType}
-                              </span>
+                              <div className="flex flex-col gap-1 items-start">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${typeCfg?.color || ""}`}>
+                                  {typeCfg?.label || report.reportType}
+                                </span>
+                                {report.feedbackCategory && feedbackCategoryConfig[report.feedbackCategory] && (
+                                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-normal ${feedbackCategoryConfig[report.feedbackCategory].color}`}>
+                                    {feedbackCategoryConfig[report.feedbackCategory].label}
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="text-sm">
                                 <p className="font-medium">{report.userId?.name || "N/A"}</p>
                                 <p className="text-xs text-muted-foreground">{report.userId?.email || ""}</p>
+                                {report.contactValue && (
+                                  <div className="mt-1 flex items-center gap-1">
+                                    <Badge variant="outline" className="text-[11px] px-1.5 py-0 font-normal border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                                      <MessageCircle className="h-2.5 w-2.5 mr-1" />
+                                      {report.contactMethod === "zalo" ? "Zalo" : "FB"}: {report.contactValue}
+                                    </Badge>
+                                  </div>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>
-                              <span className="text-sm">{report.examId?.name || "—"}</span>
+                              <span className="text-sm">
+                                {report.examId?.name || (typeof report.productId === "object" && report.productId?.name ? report.productId.name : "—")}
+                              </span>
                             </TableCell>
                             <TableCell>
                               <Badge variant={statusCfg?.variant || "default"} className="gap-1">
@@ -399,13 +484,17 @@ export default function ReportsPage() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              {report.duplicateCount > 1 ? (
-                                <Badge variant="outline" className="gap-1 text-orange-600 border-orange-300">
-                                  <Copy className="h-3 w-3" />
-                                  {report.duplicateCount}
-                                </Badge>
+                              {report.questionId ? (
+                                report.duplicateCount > 1 ? (
+                                  <Badge variant="outline" className="gap-1 text-orange-600 border-orange-300">
+                                    <Copy className="h-3 w-3" />
+                                    {report.duplicateCount}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">1</span>
+                                )
                               ) : (
-                                <span className="text-sm text-muted-foreground">1</span>
+                                <span className="text-sm text-muted-foreground">—</span>
                               )}
                             </TableCell>
                             <TableCell>

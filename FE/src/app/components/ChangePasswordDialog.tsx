@@ -22,9 +22,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { API_URLS } from "@/contants/api";
-import { Eye, EyeOff, Bug } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { fetchApi } from "@/lib/api";
+import { Eye, EyeOff, Lock } from "lucide-react";
 
 const changePasswordSchema = z
   .object({
@@ -41,6 +42,10 @@ const changePasswordSchema = z
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: "Mật khẩu xác nhận không khớp",
     path: ["confirmPassword"],
+  })
+  .refine((data) => data.newPassword !== data.currentPassword, {
+    message: "Mật khẩu mới phải khác mật khẩu hiện tại",
+    path: ["newPassword"],
   });
 
 type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
@@ -58,9 +63,9 @@ export function ChangePasswordDialog({
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [debugMode, setDebugMode] = useState(false);
   const [apiErrors, setApiErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
+  const { logout } = useAuth();
 
   const form = useForm<ChangePasswordFormData>({
     resolver: zodResolver(changePasswordSchema),
@@ -71,7 +76,7 @@ export function ChangePasswordDialog({
     },
   });
 
-  // Clear API errors when user starts typing
+  // Xóa lỗi API khi người dùng gõ vào ô tương ứng
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name && apiErrors[name]) {
@@ -88,132 +93,69 @@ export function ChangePasswordDialog({
   const onSubmit = async (values: ChangePasswordFormData) => {
     try {
       setLoading(true);
-      // Clear previous API errors
       setApiErrors({});
-      console.log("🔄 Submitting password change request...");
 
-      const response = await fetch(API_URLS.AUTH_CHANGE_PASSWORD, {
+      const response = await fetchApi("/auth/change-password", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           currentPassword: values.currentPassword,
           newPassword: values.newPassword,
         }),
       });
 
-      console.log("📡 Response status:", response.status);
-
       const data = await response.json();
-      console.log("📄 Response data:", data);
 
-      if (data.success) {
-        console.log("✅ Password change successful");
+      if (response.ok && data.success) {
         toast({
-          title: "Thành công",
-          description: data.message || "Đổi mật khẩu thành công",
+          title: "Đổi mật khẩu thành công!",
+          description: "Mật khẩu quản trị đã được cập nhật. Vui lòng đăng nhập lại.",
         });
 
-        // Reset form và đóng dialog
         form.reset();
         setApiErrors({});
         onOpenChange(false);
+
+        // Tự động đăng xuất sau 1 giây để đăng nhập lại bằng mật khẩu mới
+        setTimeout(() => {
+          logout();
+        }, 1000);
       } else {
-        console.error("❌ Password change failed:", data);
-
-        // Xử lý lỗi dựa trên errorCode
-        if (data.errorCode) {
-          switch (data.errorCode) {
-            case "WRONG_CURRENT_PASSWORD":
-              // Hiển thị lỗi trực tiếp trên field mật khẩu hiện tại
-              setApiErrors({
-                currentPassword: "Mật khẩu hiện tại không đúng",
-              });
-              form.setFocus("currentPassword");
-              form.setValue("currentPassword", "");
-              return; // Không hiển thị toast cho trường hợp này
-
-            case "SAME_PASSWORD":
-              // Hiển thị lỗi trên field mật khẩu mới
-              setApiErrors({
-                newPassword: "Mật khẩu mới phải khác mật khẩu hiện tại",
-              });
-              form.setFocus("newPassword");
-              return;
-
-            case "PASSWORD_TOO_SHORT":
-              // Hiển thị lỗi trên field mật khẩu mới
-              setApiErrors({
-                newPassword: "Mật khẩu mới phải có ít nhất 6 ký tự",
-              });
-              form.setFocus("newPassword");
-              return;
-
-            case "NO_AUTH_COOKIE":
-            case "INVALID_COOKIE":
-              toast({
-                title: "Phiên đăng nhập hết hạn",
-                description: "Vui lòng đăng nhập lại",
-                variant: "destructive",
-              });
-              break;
-
-            case "MISSING_FIELDS":
-              toast({
-                title: "Thông tin không đầy đủ",
-                description: "Vui lòng nhập đầy đủ thông tin",
-                variant: "destructive",
-              });
-              break;
-
-            case "ACCOUNT_NOT_FOUND":
-              toast({
-                title: "Lỗi tài khoản",
-                description: "Không tìm thấy tài khoản",
-                variant: "destructive",
-              });
-              break;
-
-            case "FILE_READ_ERROR":
-            case "UPDATE_FAILED":
-              toast({
-                title: "Lỗi hệ thống",
-                description: "Lỗi hệ thống. Vui lòng thử lại sau",
-                variant: "destructive",
-              });
-              break;
-
-            default:
-              toast({
-                title: "Lỗi đổi mật khẩu",
-                description: data.message || "Đổi mật khẩu thất bại",
-                variant: "destructive",
-              });
-          }
-        } else {
-          toast({
-            title: "Lỗi đổi mật khẩu",
-            description: data.message || "Đổi mật khẩu thất bại",
-            variant: "destructive",
+        if (data.errorCode === "WRONG_CURRENT_PASSWORD") {
+          setApiErrors({
+            currentPassword: "Mật khẩu hiện tại không chính xác",
           });
+          form.setFocus("currentPassword");
+          form.setValue("currentPassword", "");
+          return;
         }
+
+        if (data.errorCode === "SAME_PASSWORD") {
+          setApiErrors({
+            newPassword: "Mật khẩu mới phải khác mật khẩu hiện tại",
+          });
+          form.setFocus("newPassword");
+          return;
+        }
+
+        if (data.errorCode === "PASSWORD_TOO_SHORT") {
+          setApiErrors({
+            newPassword: "Mật khẩu mới phải có ít nhất 6 ký tự",
+          });
+          form.setFocus("newPassword");
+          return;
+        }
+
+        toast({
+          title: "Lỗi đổi mật khẩu",
+          description: data.message || "Đổi mật khẩu thất bại. Vui lòng thử lại.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error("❌ Network/Parse error:", error);
-
-      let errorMessage = "Đã xảy ra lỗi kết nối";
-
-      if (error instanceof TypeError && error.message.includes("fetch")) {
-        errorMessage =
-          "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng";
-      } else if (error instanceof SyntaxError) {
-        errorMessage = "Lỗi xử lý dữ liệu từ server";
-      }
-
+      console.error("Lỗi đổi mật khẩu:", error);
       toast({
         title: "Lỗi kết nối",
-        description: errorMessage,
+        description: "Không thể kết nối đến máy chủ. Vui lòng thử lại sau.",
         variant: "destructive",
       });
     } finally {
@@ -227,57 +169,29 @@ export function ChangePasswordDialog({
     onOpenChange(false);
   };
 
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      // Clear errors when closing dialog
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
       setApiErrors({});
       form.reset();
     }
-    onOpenChange(open);
+    onOpenChange(isOpen);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>Đổi mật khẩu</span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setDebugMode(!debugMode)}
-              className="h-8 w-8 p-0"
-            >
-              <Bug className="h-4 w-4" />
-            </Button>
+          <DialogTitle className="flex items-center gap-2">
+            <Lock className="h-5 w-5 text-primary" />
+            <span>Đổi mật khẩu quản trị</span>
           </DialogTitle>
           <DialogDescription>
-            Nhập mật khẩu hiện tại và mật khẩu mới để thay đổi mật khẩu của bạn.
+            Nhập mật khẩu hiện tại và mật khẩu mới (tối thiểu 6 ký tự). Sau khi đổi, bạn sẽ được tự động đăng xuất để đăng nhập lại.
           </DialogDescription>
         </DialogHeader>
 
-        {debugMode && (
-          <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-xs">
-            <div className="font-semibold text-yellow-800">Debug Info:</div>
-            <div className="mt-1 space-y-1 text-yellow-700">
-              <div>API URL: {API_URLS.AUTH_CHANGE_PASSWORD}</div>
-              <div>Loading: {loading ? "Yes" : "No"}</div>
-              <div>Form Valid: {form.formState.isValid ? "Yes" : "No"}</div>
-              <div>
-                Errors:{" "}
-                {Object.keys(form.formState.errors).join(", ") || "None"}
-              </div>
-              <div>
-                User Cookie:{" "}
-                {document.cookie.includes("user") ? "Present" : "Missing"}
-              </div>
-            </div>
-          </div>
-        )}
-
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
             {/* Mật khẩu hiện tại */}
             <FormField
               control={form.control}
@@ -291,7 +205,7 @@ export function ChangePasswordDialog({
                         type={showCurrentPassword ? "text" : "password"}
                         placeholder="Nhập mật khẩu hiện tại"
                         className={
-                          apiErrors.currentPassword ? "border-red-500" : ""
+                          apiErrors.currentPassword ? "border-red-500 pr-10" : "pr-10"
                         }
                         {...field}
                       />
@@ -299,7 +213,7 @@ export function ChangePasswordDialog({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-muted-foreground hover:text-foreground"
                         onClick={() =>
                           setShowCurrentPassword(!showCurrentPassword)
                         }
@@ -314,7 +228,7 @@ export function ChangePasswordDialog({
                   </FormControl>
                   <FormMessage />
                   {apiErrors.currentPassword && (
-                    <p className="text-sm text-red-600 mt-1">
+                    <p className="text-sm font-medium text-destructive mt-1">
                       {apiErrors.currentPassword}
                     </p>
                   )}
@@ -335,7 +249,7 @@ export function ChangePasswordDialog({
                         type={showNewPassword ? "text" : "password"}
                         placeholder="Nhập mật khẩu mới (ít nhất 6 ký tự)"
                         className={
-                          apiErrors.newPassword ? "border-red-500" : ""
+                          apiErrors.newPassword ? "border-red-500 pr-10" : "pr-10"
                         }
                         {...field}
                       />
@@ -343,7 +257,7 @@ export function ChangePasswordDialog({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-muted-foreground hover:text-foreground"
                         onClick={() => setShowNewPassword(!showNewPassword)}
                       >
                         {showNewPassword ? (
@@ -356,7 +270,7 @@ export function ChangePasswordDialog({
                   </FormControl>
                   <FormMessage />
                   {apiErrors.newPassword && (
-                    <p className="text-sm text-red-600 mt-1">
+                    <p className="text-sm font-medium text-destructive mt-1">
                       {apiErrors.newPassword}
                     </p>
                   )}
@@ -376,13 +290,14 @@ export function ChangePasswordDialog({
                       <Input
                         type={showConfirmPassword ? "text" : "password"}
                         placeholder="Nhập lại mật khẩu mới"
+                        className="pr-10"
                         {...field}
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-muted-foreground hover:text-foreground"
                         onClick={() =>
                           setShowConfirmPassword(!showConfirmPassword)
                         }
@@ -400,7 +315,7 @@ export function ChangePasswordDialog({
               )}
             />
 
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"

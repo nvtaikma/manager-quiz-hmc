@@ -20,7 +20,7 @@ export interface PendingReportItem {
     email?: string;
   } | null;
   questionText?: string;
-  reportType: "content_error" | "wrong_answer";
+  reportType: "content_error" | "wrong_answer" | "feedback";
   status: "pending" | "reviewed" | "resolved" | "rejected";
   createdAt: string;
   description?: string;
@@ -45,6 +45,11 @@ const typeConfig: Record<
     label: "Lỗi nội dung",
     badgeClass:
       "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900",
+  },
+  feedback: {
+    label: "Góp ý phát triển",
+    badgeClass:
+      "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900",
   },
 };
 
@@ -144,9 +149,9 @@ export default function PendingReportsWidget({
               badgeClass: "bg-slate-100 text-slate-700",
             };
             const questionSnippet =
-              item.questionText ||
-              item.description ||
-              "Báo cáo sai sót câu hỏi thi";
+              item.reportType === "feedback"
+                ? item.description || "Góp ý phát triển phần mềm"
+                : item.questionText || item.description || "Báo cáo sai sót câu hỏi thi";
 
             return (
               <div

@@ -6,6 +6,7 @@ interface ReportListQuery {
   limit: number;
   status?: string;
   reportType?: string;
+  feedbackCategory?: string;
   search?: string;
 }
 
@@ -21,7 +22,7 @@ class QuestionReportService {
    * Lấy danh sách báo cáo kèm phân trang, filter, search và stats
    */
   async getReports(query: ReportListQuery) {
-    const { page = 1, limit = 20, status, reportType, search } = query;
+    const { page = 1, limit = 20, status, reportType, feedbackCategory, search } = query;
     const skip = (page - 1) * limit;
 
     // Build filter object
@@ -32,8 +33,16 @@ class QuestionReportService {
     if (reportType && reportType !== "all") {
       filter.reportType = reportType;
     }
+    if (feedbackCategory && feedbackCategory !== "all") {
+      filter.feedbackCategory = feedbackCategory;
+    }
     if (search) {
-      filter.questionText = { $regex: search, $options: "i" };
+      filter.$or = [
+        { questionText: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+        { reason: { $regex: search, $options: "i" } },
+        { contactValue: { $regex: search, $options: "i" } },
+      ];
     }
 
     // Parallel: Fetch reports + count + stats
@@ -41,6 +50,7 @@ class QuestionReportService {
       QuestionReport.find(filter)
         .populate("userId", "name email")
         .populate("examId", "name")
+        .populate("productId", "name")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -49,20 +59,31 @@ class QuestionReportService {
       this.getStats(),
     ]);
 
-    // Aggregate: đếm số báo cáo trùng questionId cho mỗi report
-    const questionIds = [...new Set(reports.map((r) => r.questionId.toString()))];
-    const duplicateCounts = await QuestionReport.aggregate([
-      { $match: { questionId: { $in: questionIds.map((id) => new Types.ObjectId(id)) } } },
-      { $group: { _id: "$questionId", count: { $sum: 1 } } },
-    ]);
+    // Aggregate: đếm số báo cáo trùng questionId cho mỗi report (nếu có questionId)
+    const questionIds = [
+      ...new Set(
+        reports
+          .filter((r) => r.questionId)
+          .map((r) => r.questionId!.toString())
+      ),
+    ];
 
-    const duplicateMap = new Map(
-      duplicateCounts.map((d) => [d._id.toString(), d.count])
-    );
+    let duplicateMap = new Map<string, number>();
+    if (questionIds.length > 0) {
+      const duplicateCounts = await QuestionReport.aggregate([
+        { $match: { questionId: { $in: questionIds.map((id) => new Types.ObjectId(id)) } } },
+        { $group: { _id: "$questionId", count: { $sum: 1 } } },
+      ]);
+      duplicateMap = new Map(
+        duplicateCounts.map((d) => [d._id.toString(), d.count])
+      );
+    }
 
     const reportsWithDuplicates = reports.map((report) => ({
       ...report,
-      duplicateCount: duplicateMap.get(report.questionId.toString()) || 1,
+      duplicateCount: report.questionId
+        ? duplicateMap.get(report.questionId.toString()) || 1
+        : 1,
     }));
 
     return {
@@ -113,6 +134,7 @@ class QuestionReportService {
     const report = await QuestionReport.findById(reportId)
       .populate("userId", "name email")
       .populate("examId", "name")
+      .populate("productId", "name")
       .populate("questionId", "text answers image orderNumber difficulty")
       .populate("resolvedBy", "email")
       .lean();
@@ -121,14 +143,18 @@ class QuestionReportService {
       throw new Error("Không tìm thấy báo cáo");
     }
 
-    // Tìm các báo cáo khác cùng questionId
-    const relatedReports = await QuestionReport.find({
-      questionId: report.questionId,
-      _id: { $ne: report._id },
-    })
-      .populate("userId", "name email")
-      .sort({ createdAt: -1 })
-      .lean();
+    // Tìm các báo cáo khác cùng questionId (nếu có questionId)
+    let relatedReports: any[] = [];
+    if (report.questionId) {
+      const qId = typeof report.questionId === "object" ? (report.questionId as any)._id : report.questionId;
+      relatedReports = await QuestionReport.find({
+        questionId: qId,
+        _id: { $ne: report._id },
+      })
+        .populate("userId", "name email")
+        .sort({ createdAt: -1 })
+        .lean();
+    }
 
     return {
       report,
@@ -239,8 +265,13 @@ class QuestionReportService {
         { $sort: { _id: 1 } },
       ]),
 
-      // Top 5 câu hỏi bị báo lỗi nhiều nhất
+      // Top 5 câu hỏi bị báo lỗi nhiều nhất (chỉ tính báo cáo có questionId)
       QuestionReport.aggregate([
+        {
+          $match: {
+            questionId: { $ne: null },
+          },
+        },
         {
           $group: {
             _id: "$questionId",

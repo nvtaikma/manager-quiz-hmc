@@ -15,6 +15,7 @@ class QuestionReportController {
         limit = 20,
         status,
         reportType,
+        feedbackCategory,
         search,
       } = req.query;
 
@@ -23,6 +24,7 @@ class QuestionReportController {
         limit: Number(limit),
         status: status as string,
         reportType: reportType as string,
+        feedbackCategory: feedbackCategory as string,
         search: search as string,
       });
 

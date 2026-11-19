@@ -1,11 +1,16 @@
 import { Schema, model, Document, Types } from "mongoose";
+import "./products";
+import "./exam";
+import "./question";
+import "./User";
 
 export interface IQuestionReport extends Document {
   userId: Types.ObjectId;
-  questionId: Types.ObjectId;
+  questionId?: Types.ObjectId;
   examId?: Types.ObjectId;
   productId: Types.ObjectId;
-  reportType: "content_error" | "wrong_answer";
+  reportType: "content_error" | "wrong_answer" | "feedback";
+  feedbackCategory?: "new_feature" | "study_mode" | "ui_ux" | "bug_other";
   description?: string;
   correctAnswer?: string;
   reason?: string;
@@ -31,7 +36,7 @@ const questionReportSchema = new Schema<IQuestionReport>(
     questionId: {
       type: Schema.Types.ObjectId,
       ref: "Question",
-      required: true,
+      required: false,
     },
     examId: {
       type: Schema.Types.ObjectId,
@@ -39,12 +44,17 @@ const questionReportSchema = new Schema<IQuestionReport>(
     },
     productId: {
       type: Schema.Types.ObjectId,
+      ref: "products",
       required: true,
     },
     reportType: {
       type: String,
-      enum: ["content_error", "wrong_answer"],
+      enum: ["content_error", "wrong_answer", "feedback"],
       required: true,
+    },
+    feedbackCategory: {
+      type: String,
+      enum: ["new_feature", "study_mode", "ui_ux", "bug_other"],
     },
     description: {
       type: String,

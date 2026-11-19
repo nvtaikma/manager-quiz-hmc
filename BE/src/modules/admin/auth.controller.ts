@@ -67,3 +67,79 @@ export const checkAuth = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Lỗi server trong quá trình kiểm tra xác thực" });
   }
 };
+
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const adminAuth = (req as any).admin;
+    if (!adminAuth || !adminAuth.id) {
+      res.status(401).json({ success: false, message: "Unauthorized", errorCode: "UNAUTHORIZED" });
+      return;
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({
+        success: false,
+        message: "Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới",
+        errorCode: "MISSING_FIELDS",
+      });
+      return;
+    }
+
+    if (typeof newPassword !== "string" || newPassword.length < 6) {
+      res.status(400).json({
+        success: false,
+        message: "Mật khẩu mới phải có ít nhất 6 ký tự",
+        errorCode: "PASSWORD_TOO_SHORT",
+      });
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      res.status(400).json({
+        success: false,
+        message: "Mật khẩu mới phải khác mật khẩu hiện tại",
+        errorCode: "SAME_PASSWORD",
+      });
+      return;
+    }
+
+    const admin = await Admin.findById(adminAuth.id);
+    if (!admin) {
+      res.status(404).json({
+        success: false,
+        message: "Không tìm thấy tài khoản quản trị viên",
+        errorCode: "ACCOUNT_NOT_FOUND",
+      });
+      return;
+    }
+
+    const isMatch = await admin.comparePassword(currentPassword);
+    if (!isMatch) {
+      res.status(400).json({
+        success: false,
+        message: "Mật khẩu hiện tại không chính xác",
+        errorCode: "WRONG_CURRENT_PASSWORD",
+      });
+      return;
+    }
+
+    // Cập nhật mật khẩu mới (hook pre('save') trên Admin model sẽ tự động hash mật khẩu với bcrypt)
+    admin.password = newPassword;
+    await admin.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Đổi mật khẩu thành công. Vui lòng đăng nhập lại với mật khẩu mới.",
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server trong quá trình đổi mật khẩu",
+      errorCode: "SERVER_ERROR",
+    });
+  }
+};
+
